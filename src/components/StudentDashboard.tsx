@@ -4,6 +4,8 @@ import { CameraIcon, MapPinIcon, CheckCircleIcon, AlertTriangleIcon, UsersIcon, 
 import Modal from './Modal';
 import QRCodeScanner from './QRCodeScanner';
 import QRCodeDisplay from './QRCodeDisplay';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { 
     getStudentGroup, 
     assignStudentToGroup, 
@@ -287,13 +289,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const handleExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId);
         if (!selectedLecture) return;
-
-        const html2canvas = (window as any).html2canvas;
-        const { jsPDF } = (window as any).jspdf;
-        if (!html2canvas || !jsPDF) {
-            alert("PDF generation library is not loaded.");
-            return;
-        }
 
         setIsExportingPdf(true);
 

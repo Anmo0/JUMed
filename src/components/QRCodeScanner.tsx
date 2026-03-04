@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface QRCodeScannerProps {
     onScanSuccess: (decodedText: string) => void;
@@ -19,7 +20,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose, q
             return;
         }
 
-        const html5QrCode = new (window as any).Html5Qrcode(readerId);
+        const html5QrCode = new Html5Qrcode(readerId);
         let isScanning = true;
 
         const qrCodeSuccessCallback = (decodedText: string, decodedResult: any) => {

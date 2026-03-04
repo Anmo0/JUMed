@@ -25,6 +25,8 @@ import {
 import QRCodeDisplay from './QRCodeDisplay';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface AdminDashboardProps {
     students: Student[];
@@ -1026,14 +1028,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId);
         if (!selectedLecture) return;
 
-        const { jsPDF } = (window as any).jspdf;
-        const html2canvas = (window as any).html2canvas;
-
-        if (!jsPDF || !html2canvas) {
-            alert("مكتبات PDF غير محملة.");
-            return;
-        }
-
         setIsExportingPdf(true);
 
         const isLightMode = attendanceData.length >= 200;
@@ -1072,7 +1066,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     if (yPos > 280) {
                         pdf.addPage();
                         yPos = 20;
-                        addHeader(pdf.internal.getNumberOfPages());
+                        addHeader(pdf.getNumberOfPages());
                     }
 
                     const status = student.status === 'حاضر' ? 'Present' : 'Absent';

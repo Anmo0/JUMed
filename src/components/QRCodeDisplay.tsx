@@ -1,17 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { Lecture } from '../types';
 import { QrCodeIcon } from './icons';
-
-// Add QRCode to the window object for TypeScript
-declare global {
-    interface Window {
-        QRCode: {
-            toDataURL: (text: string, options: any, callback: (err: any, url: string) => void) => void;
-        };
-    }
-}
-
 
 interface QRCodeDisplayProps {
     activeLecture: Lecture | null;
@@ -36,7 +27,7 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ activeLecture, onGenerate
     // Effect to generate QR code data URL locally
     useEffect(() => {
         if (activeLecture?.qrCode) {
-            window.QRCode.toDataURL(
+            QRCode.toDataURL(
                 activeLecture.qrCode,
                 {
                     errorCorrectionLevel: 'H',
