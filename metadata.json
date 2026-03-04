@@ -1,0 +1,8 @@
+{
+  "name": "نظام الحضور بالباركود",
+  "description": "تطبيق ويب لتسجيل حضور الطلاب باستخدام مسح الباركود وتحديد الموقع الجغرافي.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

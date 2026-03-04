@@ -1,0 +1,56 @@
+
+@import "tailwindcss";
+
+body {
+  @apply bg-slate-900 text-slate-50;
+}
+
+.ramadan-theme {
+    background-color: #050a14 !important;
+    background-image: 
+        radial-gradient(circle at 0% 0%, hsla(45, 100%, 50%, 0.08), transparent 40%),
+        radial-gradient(circle at 100% 100%, hsla(160, 100%, 40%, 0.05), transparent 40%),
+        url("https://www.transparenttextures.com/patterns/arabesque.png") !important;
+    color: #f8fafc !important;
+}
+
+.ramadan-header {
+    background-color: rgba(5, 10, 20, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2) !important;
+}
+
+.ramadan-card {
+    background-color: rgba(15, 23, 42, 0.4) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(212, 175, 55, 0.15) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.ramadan-text-gold {
+    color: #D4AF37 !important;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important;
+}
+
+.ramadan-border-gold {
+    border-color: rgba(212, 175, 55, 0.3) !important;
+}
+
+.ramadan-btn-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+    color: #050a14 !important;
+    box-shadow: 0 4px 15px rgba(184, 134, 11, 0.3) !important;
+    border: none !important;
+}
+
+.ramadan-btn-gold:hover {
+    background: linear-gradient(135deg, #e5c05b 0%, #d4af37 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(184, 134, 11, 0.4) !important;
+}
+
+.ramadan-badge-gold {
+    background-color: rgba(212, 175, 55, 0.1) !important;
+    color: #D4AF37 !important;
+    border: 1px solid rgba(212, 175, 55, 0.3) !important;
+}
