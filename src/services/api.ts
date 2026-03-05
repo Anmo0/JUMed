@@ -40,8 +40,55 @@ NOTIFY pgrst, 'reload schema';
 // --- Local Session Management ---
 let currentUserStore: User | null = null;
 
+// --- DB Types Interfaces (للتخلص من any) ---
+interface DBStudent {
+    id: string;
+    name: string;
+    university_id: string;
+    serial_number: string;
+    device_info: string | null;
+    batch_id: string;
+    is_batch_leader: boolean;
+    can_manage_attendance: boolean;
+    tag: string | null;
+    group_id: string | null;
+    groups?: { name: string };
+    is_group_leader?: boolean;
+    is_leader?: boolean;
+}
+
+interface DBAttendanceRecord {
+    id: string;
+    student_id: string;
+    student_name: string;
+    timestamp: string;
+    location: { latitude: number; longitude: number };
+    lecture_id: string;
+    is_outside_radius: boolean;
+    manual_entry: boolean;
+    distance: number;
+}
+
+interface DBLecture {
+    id: string;
+    qr_code: string;
+    course_name: string;
+    course_id?: string;
+    batch_id: string;
+    date: string;
+    time_slot: string;
+    created_at: string;
+    location: { latitude: number; longitude: number };
+}
+
+interface DBGroup {
+    id: string;
+    name: string;
+    batch_id: string;
+}
+
 // --- Helper Mappers ---
-const mapToStudent = (s: any): Student => ({
+const mapToStudent = (s: DBStudent): Student => ({
     id: s.id,
     name: s.name,
     universityId: s.university_id,
@@ -51,13 +98,12 @@ const mapToStudent = (s: any): Student => ({
     isBatchLeader: s.is_batch_leader,
     canManageAttendance: s.can_manage_attendance,
     tag: s.tag,
-    // الحقول الجديدة لربط المجموعات
-    groupId: s.group_id,
+    groupId: s.group_id || undefined,
     groupName: s.groups?.name, 
     isLeader: s.is_group_leader || s.is_leader || false, 
 });
 
-const mapToAttendanceRecord = (r: any): AttendanceRecord => ({
+const mapToAttendanceRecord = (r: DBAttendanceRecord): AttendanceRecord => ({
     id: r.id,
     studentId: r.student_id,
     studentName: r.student_name,
@@ -69,8 +115,8 @@ const mapToAttendanceRecord = (r: any): AttendanceRecord => ({
     distance: r.distance,
 });
 
-const mapToLecture = (l: any): Lecture => ({
-    id: l.id,                    // ✅ جديد
+const mapToLecture = (l: DBLecture): Lecture => ({
+    id: l.id,
     qrCode: l.qr_code,
     courseName: l.course_name,
     courseId: l.course_id,
@@ -81,7 +127,7 @@ const mapToLecture = (l: any): Lecture => ({
     location: l.location,
 });
 
-const mapToGroup = (g: any): Group => ({
+const mapToGroup = (g: DBGroup): Group => ({
     id: g.id,
     name: g.name,
     batchId: g.batch_id
