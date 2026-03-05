@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Student, AttendanceRecord, Lecture, Course } from '../../types';
-import { ClipboardListIcon, TrashIcon, CopyIcon, CheckCircleIcon, XCircleIcon, AlertTriangleIcon, UsersIcon } from '../icons';
+import { Student, AttendanceRecord, Lecture, Batch } from '../../types';
+import { ClipboardListIcon, TrashIcon, CopyIcon, CheckCircleIcon, XCircleIcon, UsersIcon } from '../icons';
 import Modal from '../Modal';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface Props {
     students: Student[];
@@ -13,6 +15,7 @@ interface Props {
     selectedDateFilter: string;
     setSelectedDateFilter: (date: string) => void;
     activeLecture: Lecture | null;
+    currentBatch?: Batch;
     isRamadanMode: boolean;
     onManualAttendance: (sId: string, lId: string) => void;
     onRemoveAttendance: (sId: string, lId: string) => void;
@@ -21,18 +24,16 @@ interface Props {
     onRepeatPreviousAttendance: (lId: string) => Promise<{ success: boolean; message: string; }>;
     onDeleteLecture: (lId: string) => void;
     setActiveTab: (tab: any) => void;
-    handleExportPdf: () => void;
-    isExportingPdf: boolean;
 }
 
 const AdminAttendanceTab: React.FC<Props> = (props) => {
-    const { students, attendanceRecords, lectures, selectedBatchId, selectedLectureId, setSelectedLectureId, selectedDateFilter, setSelectedDateFilter, activeLecture, isRamadanMode, setActiveTab } = props;
+    const { students, attendanceRecords, lectures, selectedBatchId, selectedLectureId, setSelectedLectureId, selectedDateFilter, setSelectedDateFilter, activeLecture, currentBatch, isRamadanMode, setActiveTab } = props;
     
     const [attendanceGroupFilter, setAttendanceGroupFilter] = useState<string | 'all'>('all');
     const [isClearAttendanceModalOpen, setClearAttendanceModalOpen] = useState(false);
-    const [isClearLecturesModalOpen, setClearLecturesModalOpen] = useState(false);
     const [isDeleteLectureModalOpen, setDeleteLectureModalOpen] = useState(false);
     const [isRepeatModalOpen, setRepeatModalOpen] = useState(false);
+    const [isExportingPdf, setIsExportingPdf] = useState(false);
 
     const uniqueDates = useMemo(() => Array.from(new Set(lectures.map(l => l.date))).sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [lectures]);
     const filteredLectures = useMemo(() => lectures.filter(l => l.date === selectedDateFilter), [lectures, selectedDateFilter]);
@@ -57,6 +58,63 @@ const AdminAttendanceTab: React.FC<Props> = (props) => {
         }).sort((a, b) => Number(a.serialNumber) - Number(b.serialNumber));
     }, [students, attendanceRecords, selectedLectureId, lectures, attendanceGroupFilter]);
 
+    // 💡 ميزة التصدير (PDF) عادت للعمل من هنا بشكل مستقل!
+    const handleExportPdf = async () => {
+        const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId || l.id === selectedLectureId);
+        if (!selectedLecture) return;
+        setIsExportingPdf(true);
+
+        try {
+            const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            let yPos = 20;
+
+            const addHeader = (page: number) => {
+                pdf.setFontSize(18);
+                pdf.text("تقرير الحضور", 105, yPos, { align: 'center' });
+                yPos += 10;
+                pdf.setFontSize(11);
+                pdf.text(`المقرر: ${selectedLecture.courseName} | الدفعة: ${currentBatch?.batchName || ''}`, 105, yPos, { align: 'center' });
+                yPos += 6;
+                pdf.text(`تاريخ المحاضرة: ${selectedLecture.date} | الوقت: ${selectedLecture.timeSlot}`, 105, yPos, { align: 'center' });
+                yPos += 5;
+                pdf.line(15, yPos, 195, yPos);
+                yPos += 10;
+                
+                pdf.setFontSize(10);
+                pdf.text("الحالة", 30, yPos);
+                pdf.text("الاسم", 185, yPos, { align: 'right' });
+                pdf.text("#", 195, yPos, { align: 'right' });
+                yPos += 5;
+                pdf.line(15, yPos, 195, yPos);
+                yPos += 8;
+            };
+
+            addHeader(1);
+            pdf.setFontSize(9);
+
+            attendanceData.forEach((student, index) => {
+                if (yPos > 280) {
+                    pdf.addPage();
+                    yPos = 20;
+                    addHeader(pdf.getNumberOfPages());
+                }
+                const status = student.status === 'حاضر' ? 'Present' : 'Absent';
+                pdf.text(status, 30, yPos);
+                pdf.text(student.name, 185, yPos, { align: 'right' });
+                pdf.text(student.serialNumber, 195, yPos, { align: 'right' });
+                
+                yPos += 7;
+                if ((index + 1) % 5 === 0) pdf.setDrawColor(240); 
+            });
+
+            pdf.save(`Report-${selectedLecture.courseName}.pdf`);
+        } catch (error) {
+            alert("حدث خطأ في التصدير.");
+        } finally {
+            setIsExportingPdf(false);
+        }
+    };
+
     if (!selectedBatchId) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
@@ -79,7 +137,7 @@ const AdminAttendanceTab: React.FC<Props> = (props) => {
                     const date = new Date(dateStr);
                     const isSelected = selectedDateFilter === dateStr;
                     return (
-                        <button key={dateStr} onClick={() => setSelectedDateFilter(dateStr)} className={`min-w-[85px] p-3 rounded-2xl border flex flex-col items-center ${isSelected ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-700 text-gray-400'}`}>
+                        <button key={dateStr} onClick={() => setSelectedDateFilter(dateStr)} className={`min-w-[85px] p-3 rounded-2xl border flex flex-col items-center transition-all ${isSelected ? 'bg-blue-600 border-blue-500 text-white scale-105' : 'bg-slate-800 border-slate-700 text-gray-400 hover:bg-slate-700'}`}>
                             <span className="text-xs font-bold mb-1">{date.toLocaleDateString('ar-EG', { weekday: 'short' })}</span>
                             <span className="text-lg font-black">{date.getDate()}</span>
                         </button>
@@ -95,7 +153,7 @@ const AdminAttendanceTab: React.FC<Props> = (props) => {
                 <div className="flex gap-2">
                     <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!selectedLectureId} className="px-4 py-3 bg-red-600/10 text-red-500 rounded-2xl border border-red-500/20 text-xs font-bold disabled:opacity-50">مسح التحضير</button>
                     <button onClick={() => setRepeatModalOpen(true)} disabled={!selectedLectureId} className="p-3 bg-purple-600 text-white rounded-2xl disabled:opacity-50"><CopyIcon className="w-5 h-5"/></button>
-                    <button onClick={props.handleExportPdf} disabled={!selectedLectureId || props.isExportingPdf} className="px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold disabled:opacity-50">{props.isExportingPdf ? 'تصدير...' : 'تصدير PDF'}</button>
+                    <button onClick={handleExportPdf} disabled={!selectedLectureId || isExportingPdf} className="px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold disabled:opacity-50">{isExportingPdf ? 'تصدير...' : 'تصدير PDF'}</button>
                     <button onClick={() => setDeleteLectureModalOpen(true)} disabled={!selectedLectureId} className="p-3 bg-red-600/10 text-red-500 rounded-2xl disabled:opacity-50"><TrashIcon className="w-5 h-5"/></button>
                 </div>
             </div>
@@ -124,24 +182,25 @@ const AdminAttendanceTab: React.FC<Props> = (props) => {
                 </table>
             </div>
 
+            {/* Modals... */}
             <Modal isOpen={isClearAttendanceModalOpen} onClose={() => setClearAttendanceModalOpen(false)} title="تأكيد مسح التحضير" isRamadanMode={isRamadanMode}>
                 <div className="text-center p-4">
                     <p className="text-white mb-4">مسح حضور جميع الطلاب في هذه المحاضرة؟</p>
-                    <button onClick={() => { if(selectedLectureId) props.onClearLectureAttendance(selectedLectureId); setClearAttendanceModalOpen(false); }} className="w-full py-3 bg-red-600 text-white rounded-xl">نعم، مسح</button>
+                    <button onClick={() => { if(selectedLectureId) props.onClearLectureAttendance(selectedLectureId); setClearAttendanceModalOpen(false); }} className="w-full py-3 bg-red-600 text-white rounded-xl font-bold">نعم، مسح</button>
                 </div>
             </Modal>
             
             <Modal isOpen={isDeleteLectureModalOpen} onClose={() => setDeleteLectureModalOpen(false)} title="حذف المحاضرة" isRamadanMode={isRamadanMode}>
                  <div className="text-center p-4">
                     <p className="text-white mb-4">حذف المحاضرة وسجلاتها بالكامل؟</p>
-                    <button onClick={() => { if(selectedLectureId) props.onDeleteLecture(selectedLectureId); setDeleteLectureModalOpen(false); }} className="w-full py-3 bg-red-600 text-white rounded-xl">حذف نهائي</button>
+                    <button onClick={() => { if(selectedLectureId) props.onDeleteLecture(selectedLectureId); setDeleteLectureModalOpen(false); }} className="w-full py-3 bg-red-600 text-white rounded-xl font-bold">حذف نهائي</button>
                 </div>
             </Modal>
 
             <Modal isOpen={isRepeatModalOpen} onClose={() => setRepeatModalOpen(false)} title="تكرار الحضور" isRamadanMode={isRamadanMode}>
                  <div className="text-center p-4">
                     <p className="text-white mb-4">نسخ حضور المحاضرة السابقة لنفس المقرر؟</p>
-                    <button onClick={() => { if(selectedLectureId) props.onRepeatPreviousAttendance(selectedLectureId); setRepeatModalOpen(false); }} className="w-full py-3 bg-purple-600 text-white rounded-xl">تأكيد التكرار</button>
+                    <button onClick={() => { if(selectedLectureId) props.onRepeatPreviousAttendance(selectedLectureId); setRepeatModalOpen(false); }} className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold">تأكيد التكرار</button>
                 </div>
             </Modal>
         </div>
