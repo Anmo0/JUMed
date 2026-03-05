@@ -825,7 +825,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                         <div className="flex items-center gap-2">
                                                             <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold">{members.length} طلاب</span>
                                                             <button onClick={() => { setEditGroupName(group.name); setManagementSelectedGroupId(group.id); setEditGroupNameModalOpen(true); }} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all" title="تعديل الاسم"><EditIcon className="w-4 h-4" /></button>
-                                                            <button onClick={() => { if (onDeleteGroupLocal) onDeleteGroupLocal(group.id); }} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-all" title="حذف المجموعة"><TrashIcon className="w-4 h-4" /></button>
+                                                            <button onClick={() => { if (onDeleteGroupLocal) { onDeleteGroupLocal(group.id); } else { alert('يرجى تحديث الصفحة والمحاولة'); } }} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-all" title="حذف المجموعة"><TrashIcon className="w-4 h-4" /></button>
                                                         </div>
                                                     </div>
                                                     
@@ -946,7 +946,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                         )}
 
                                                         <div className="flex gap-2">
-                                                            {/* 💡 تعديل العلامة وتعيين القائد: لليدر الدفعة (isBatchAdmin) فقط! */}
+                                                            {/* 💡 تعديل العلامة، تعيين القائد، وإزالة الطالب: لليدر الدفعة فقط! */}
                                                             {isBatchAdmin && (
                                                                 <button onClick={() => {
                                                                     const newTag = prompt('أدخل العلامة للطالب:', member.tag);
@@ -959,26 +959,24 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                             )}
                                                             
                                                             {isBatchAdmin && member.id !== student?.id && (
-                                                                <button onClick={() => {
-                                                                    if (confirm(`هل أنت متأكد من ${member.isLeader ? 'إلغاء تعيين' : 'تعيين'} ${member.name} كقائد للمجموعة؟`)) {
-                                                                        onUpdateStudent(member.id, { isLeader: !member.isLeader });
-                                                                    }
-                                                                }} className={`${member.isLeader ? 'text-red-500 hover:text-red-400 bg-red-500/5' : 'text-blue-500 hover:text-blue-400 bg-blue-500/5'} font-black text-[10px] flex items-center gap-1 uppercase tracking-wider px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90`}>
-                                                                    <UsersIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">{member.isLeader ? 'إلغاء القيادة' : 'تعيين كقائد'}</span>
-                                                                </button>
-                                                            )}
-                                                            
-                                                            {/* 💡 التحضير والغياب: متاح للجميع داخل هذه التبويبة */}
-                                                            {selectedLectureId && (
-                                                                isPresent ? (
-                                                                    <button onClick={() => onRemoveAttendance(member.id, actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
-                                                                        <XCircleIcon className="w-3.5 h-3.5"/> غياب
+                                                                <>
+                                                                    <button onClick={() => {
+                                                                        if (confirm(`هل أنت متأكد من ${member.isLeader ? 'إلغاء تعيين' : 'تعيين'} ${member.name} كقائد للمجموعة؟`)) {
+                                                                            onUpdateStudent(member.id, { isLeader: !member.isLeader });
+                                                                        }
+                                                                    }} className={`${member.isLeader ? 'text-orange-500 hover:text-orange-400 bg-orange-500/5' : 'text-blue-500 hover:text-blue-400 bg-blue-500/5'} font-black text-[10px] flex items-center gap-1 uppercase tracking-wider px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90`}>
+                                                                        <UsersIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">{member.isLeader ? 'إلغاء القيادة' : 'تعيين كقائد'}</span>
                                                                     </button>
-                                                                ) : (
-                                                                    <button onClick={() => onManualAttendance(member.id, actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
-                                                                        <CheckCircleIcon className="w-3.5 h-3.5"/> تحضير
+
+                                                                    {/* 💡 زر إزالة الطالب من المجموعة */}
+                                                                    <button onClick={() => {
+                                                                        if (confirm(`هل أنت متأكد من إزالة الطالب "${member.name}" من هذه المجموعة؟`)) {
+                                                                            onUpdateStudent(member.id, { groupId: undefined, groupName: undefined, isLeader: false });
+                                                                        }
+                                                                    }} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
+                                                                        <TrashIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">إزالة</span>
                                                                     </button>
-                                                                )
+                                                                </>
                                                             )}
                                                         </div>
                                                     </div>
