@@ -99,12 +99,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [activeTab, setActiveTab] = useState<'personal' | 'group' | 'management'>(() => {
         return (sessionStorage.getItem('studentActiveTab') as any) || 'personal';
     });
-    const isBatchAdmin = student.canManageAttendance || student.isBatchLeader;
+    const isBatchAdmin = student?.canManageAttendance || student?.isBatchLeader || false;
 
     // 💡 حالات إدارة المجموعات لليدر
     const [managementSelectedGroupId, setManagementSelectedGroupId] = useState<string | null>(null);
-    const activeGroupId = isBatchAdmin && managementSelectedGroupId ? managementSelectedGroupId : student.groupId;
-    const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId) || {name: student.groupName}, [groups, activeGroupId, student.groupName]);
+    const activeGroupId = isBatchAdmin && managementSelectedGroupId ? managementSelectedGroupId : student?.groupId;
+    const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId) || {name: student?.groupName}, [groups, activeGroupId, student?.groupName]);
     
     useEffect(() => {
         sessionStorage.setItem('studentActiveTab', activeTab);
@@ -277,31 +277,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             finalLectureName = `${selectedCourse.name} - محاضرة ${lectureCount}`;
         }
 
-        onGenerateQrCode(
-            { 
-                date: qrForm.date, 
-                timeSlot: `${formatTimeToArabic(qrForm.startTime)} - ${formatTimeToArabic(qrForm.endTime)}`,
-                courseName: finalLectureName, 
-                courseId: selectedCourse.id,
-                batchId: student.batchId,
-                isManual: isManualMode // 👈 نمرر القيمة هنا
-            },
-            {
-                onSuccess: () => {
-                    setQrModalOpen(false);
-                    setIsCreatingQr(false);
-
-                    // 💡 التعديلات الصحيحة الخاصة بالليدر:
-                    setSelectedDateFilter(qrForm.date); 
-                    setManagementSelectedLectureId(null); // استخدام المتغير الخاص بتحضير الدفعة
-                    setActiveTab('management'); // الانتقال لتبويبة تحضير الدفعة الصحيحة
-                },
-                onError: (message: string) => {
-                    setIsCreatingQr(false);
-                    setQrError(message);
-                }
-            }
-        );
+        onGenerateQrCode({ date: qrForm.date, timeSlot: `${formatTimeToArabic(qrForm.startTime)} - ${formatTimeToArabic(qrForm.endTime)}`, courseName: finalLectureName, courseId: selectedCourse.id, batchId: student?.batchId || '', isManual: isManualMode }, {
+            onSuccess: () => { setQrModalOpen(false); setIsCreatingQr(false); setSelectedDateFilter(qrForm.date); setManagementSelectedLectureId(null); setActiveTab('management'); },
+            onError: (message: string) => { setIsCreatingQr(false); setQrError(message); }
+        });
     }
 
     const handleConfirmDeleteLecture = () => {
