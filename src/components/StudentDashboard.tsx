@@ -946,7 +946,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                         )}
 
                                                         <div className="flex gap-2">
-                                                            {/* 💡 تعديل العلامة، تعيين القائد، وإزالة الطالب: لليدر الدفعة فقط! */}
+                                                            {/* 💡 تعديل العلامة: لليدر الدفعة فقط */}
                                                             {isBatchAdmin && (
                                                                 <button onClick={() => {
                                                                     const newTag = prompt('أدخل العلامة للطالب:', member.tag);
@@ -958,6 +958,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                 </button>
                                                             )}
                                                             
+                                                            {/* 💡 تعيين القائد والطرد: لليدر الدفعة فقط */}
                                                             {isBatchAdmin && member.id !== student?.id && (
                                                                 <>
                                                                     <button onClick={() => {
@@ -968,7 +969,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                         <UsersIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">{member.isLeader ? 'إلغاء القيادة' : 'تعيين كقائد'}</span>
                                                                     </button>
 
-                                                                    {/* 💡 زر إزالة الطالب من المجموعة */}
                                                                     <button onClick={() => {
                                                                         if (confirm(`هل أنت متأكد من إزالة الطالب "${member.name}" من هذه المجموعة؟`)) {
                                                                             onUpdateStudent(member.id, { groupId: undefined, groupName: undefined, isLeader: false });
@@ -977,6 +977,19 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                         <TrashIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">إزالة</span>
                                                                     </button>
                                                                 </>
+                                                            )}
+
+                                                            {/* 💡 التحضير والغياب: متاح لقائد المجموعة العادي وليدر الدفعة */}
+                                                            {selectedLectureId && (
+                                                                isPresent ? (
+                                                                    <button onClick={() => onRemoveAttendance(member.id, actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
+                                                                        <XCircleIcon className="w-3.5 h-3.5"/> غياب
+                                                                    </button>
+                                                                ) : (
+                                                                    <button onClick={() => onManualAttendance(member.id, actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
+                                                                        <CheckCircleIcon className="w-3.5 h-3.5"/> تحضير
+                                                                    </button>
+                                                                )
                                                             )}
                                                         </div>
                                                     </div>
