@@ -1368,7 +1368,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             disabled={isCreatingQr || !selectedCourseId} 
                             className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
                         >
-                            {isCreatingQr ? 'جاري الإنشاء...' : 'إنشاء محاضرة يدوية (بدون باركود)'}
+                            {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور'}
                         </button>
                     </div>
                 </form>
