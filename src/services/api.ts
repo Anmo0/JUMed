@@ -929,19 +929,18 @@ export const clearAllLectures = async (): Promise<MutationResult<null>> => {
 };
 
 export const deleteAllGroups = async (): Promise<MutationResult<null>> => {
-    await supabase.from('students').update({ group_id: null }).not('id', 'is', null);
+    // 💡 تجريد جميع الطلاب من مناصب القيادة وفك ارتباطهم بالمجموعات
+    await supabase.from('students').update({ group_id: null, group_name: null, is_leader: false }).not('group_id', 'is', null);
     const { error } = await supabase.from('groups').delete().not('id', 'is', null);
-    if (error) return { data: null, error: `فشل مسح جميع المجموعات: ${error.message}` };
+    if (error) return { data: null, error: `فشل مسح المجموعات: ${error.message}` };
     return { data: null, error: null };
 };
 
 export const deleteGroup = async (groupId: string): Promise<MutationResult<null>> => {
-    // إزالة ارتباط الطلاب بهذه المجموعة أولاً لتجنب الأخطاء
-    await supabase.from('students').update({ group_id: null }).eq('group_id', groupId);
+    // 💡 تجريد طلاب هذه المجموعة المحددة من القيادة وفك ارتباطهم
+    await supabase.from('students').update({ group_id: null, group_name: null, is_leader: false }).eq('group_id', groupId);
     const { error } = await supabase.from('groups').delete().eq('id', groupId);
-    if (error) {
-        return { data: null, error: `فشل حذف المجموعة: ${error.message}` };
-    }
+    if (error) return { data: null, error: `فشل حذف المجموعة: ${error.message}` };
     return { data: null, error: null };
 };
 

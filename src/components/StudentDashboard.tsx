@@ -476,7 +476,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     const groupMembers = useMemo(() => {
         if (!activeGroupId) return [];
-        return allStudents.filter(s => s.groupId === activeGroupId).sort((a,b) => a.name.localeCompare(b.name));
+        return allStudents
+            .filter(s => s.groupId === activeGroupId)
+            // 💡 ترتيب الطلاب بناءً على الرقم التسلسلي
+            .sort((a,b) => (Number(a.serialNumber) || 0) - (Number(b.serialNumber) || 0));
     }, [allStudents, activeGroupId]);
 
     const selectedLectureForGroup = useMemo(() => {

@@ -161,18 +161,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         try {
             const result = await promoteBatches();
             if (result.error) {
-                alert(`فشل الترقية: ${result.error}`);
+                toast.error(`فشل الترقية: ${result.error}`);
             } else {
                 const updatedBatches = await getBatches();
                 setBatches(updatedBatches);
                 setPromoteModalOpen(false);
                 setShowUndoPromotion(true);
                 setTimeout(() => setShowUndoPromotion(false), 10000);
-                alert('تم ترقية الدفعات بنجاح!');
+                toast.success('تم ترقية الدفعات بنجاح!');
             }
         } catch (error) {
-            console.error(error);
-            alert('حدث خطأ غير متوقع');
+            toast.error('حدث خطأ غير متوقع');
         } finally {
             setIsPromoting(false);
         }
@@ -192,15 +191,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         try {
             const result = await seedCourses(batch.id);
             if (result.error) {
-                alert(`فشل إضافة المقررات: ${result.error}`);
+                toast.error(`فشل إضافة المقررات: ${result.error}`);
             } else {
-                alert('تم إضافة المقررات بنجاح!');
+                toast.success('تم إضافة المقررات بنجاح!');
                 const updatedCourses = await getCourses(selectedBatchId!);
                 if (updatedCourses.data) setCourses(updatedCourses.data);
             }
         } catch (error) {
-            console.error(error);
-            alert('حدث خطأ غير متوقع');
+            toast.error('حدث خطأ غير متوقع');
         } finally {
             setIsSeeding(false);
         }
@@ -431,37 +429,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
         if (courseFormState.id) {
             const result = await updateCourse(courseFormState.id, {
-                name: courseFormState.name,
-                code: courseFormState.code,
-                creditHours: Number(courseFormState.creditHours),
-                weeks: Number(courseFormState.weeks),
-                absenceLimit: Number(courseFormState.absenceLimit),
-                absenceWeight: Number(courseFormState.absenceWeight)
+                name: courseFormState.name, code: courseFormState.code, creditHours: Number(courseFormState.creditHours), weeks: Number(courseFormState.weeks), absenceLimit: Number(courseFormState.absenceLimit), absenceWeight: Number(courseFormState.absenceWeight)
             });
-
             if (result.data) {
                 setCourses(courses.map(c => c.id === courseFormState.id ? result.data! : c));
                 setCourseModalOpen(false);
-            } else {
-                alert('فشل تحديث المقرر: ' + result.error);
-            }
+                toast.success('تم تحديث المقرر بنجاح');
+            } else { toast.error('فشل تحديث المقرر: ' + result.error); }
         } else {
             const result = await addCourse({
-                name: courseFormState.name,
-                code: courseFormState.code,
-                academicYear: currentBatch.currentYear,
-                creditHours: Number(courseFormState.creditHours),
-                weeks: Number(courseFormState.weeks),
-                absenceLimit: Number(courseFormState.absenceLimit),
-                absenceWeight: Number(courseFormState.absenceWeight)
+                name: courseFormState.name, code: courseFormState.code, academicYear: currentBatch.currentYear, creditHours: Number(courseFormState.creditHours), weeks: Number(courseFormState.weeks), absenceLimit: Number(courseFormState.absenceLimit), absenceWeight: Number(courseFormState.absenceWeight)
             });
-
             if (result.data) {
                 setCourses([...courses, result.data]);
                 setCourseModalOpen(false);
-            } else {
-                alert('فشل إضافة المقرر: ' + result.error);
-            }
+                toast.success('تم إضافة المقرر بنجاح');
+            } else { toast.error('فشل إضافة المقرر: ' + result.error); }
         }
     };
 
@@ -804,38 +787,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         if (!groupToEdit) return;
         try {
             const { data, error } = await updateGroup(groupToEdit.id, groupName);
-            if (error) {
-                alert(error);
-                return;
-            }
+            if (error) { toast.error(error); return; }
             
             const currentMemberIds = new Set(students.filter(s => s.groupId === groupToEdit.id).map(s => s.id));
             const toAdd = Array.from(selectedGroupStudentIds).filter(id => !currentMemberIds.has(id));
             const toRemove = Array.from(currentMemberIds).filter(id => !selectedGroupStudentIds.has(id));
             
             await Promise.all([
-                ...toAdd.map(id => {
-                    const s = students.find(st => st.id === id);
-                    if (s) return onUpdateStudent(s.id, { groupId: groupToEdit.id });
-                    return Promise.resolve();
-                }),
-                ...toRemove.map(id => {
-                    const s = students.find(st => st.id === id);
-                    if (s) return onUpdateStudent(s.id, { groupId: '' });
-                    return Promise.resolve();
-                })
+                ...toAdd.map(id => { const s = students.find(st => st.id === id); if (s) return onUpdateStudent(s.id, { groupId: groupToEdit.id }); return Promise.resolve(); }),
+                ...toRemove.map(id => { const s = students.find(st => st.id === id); if (s) return onUpdateStudent(s.id, { groupId: undefined, isLeader: false }); return Promise.resolve(); }) // 💡 إزالة القيادة عند الخروج من المجموعة
             ]);
 
             if (data) {
                 onUpdateGroupName(data.id, data.name);
-                setEditGroupModalOpen(false);
-                setGroupName('');
-                setGroupToEdit(null);
-                setSelectedGroupStudentIds(new Set());
+                setEditGroupModalOpen(false); setGroupName(''); setGroupToEdit(null); setSelectedGroupStudentIds(new Set());
+                toast.success('تم تحديث المجموعة بنجاح');
             }
-        } catch (err) {
-            alert('حدث خطأ أثناء تحديث المجموعة والطلاب');
-        }
+        } catch (err) { toast.error('حدث خطأ أثناء تحديث المجموعة والطلاب'); }
     };
 
     const handleOpenEditGroupModal = (group: Group) => {
@@ -917,28 +885,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const handleConfirmDeleteAllGroups = async () => {
         const { error } = await deleteAllGroups();
         if (error) {
-            alert(error);
+            toast.error(error);
         } else {
             onDeleteAllGroupsLocal();
-            alert('تم مسح جميع المجموعات بنجاح.');
+            toast.success('تم مسح جميع المجموعات بنجاح.');
         }
         setDeleteAllGroupsModalOpen(false);
-    };
-
-    const handleConfirmArchiveBatch = async () => {
-        if (!groupActionTarget) return;
-        const updates = [];
-        if (groupActionTarget.male) updates.push({ ...groupActionTarget.male, isArchived: !groupActionTarget.isArchived });
-        if (groupActionTarget.female) updates.push({ ...groupActionTarget.female, isArchived: !groupActionTarget.isArchived });
-        
-        try {
-            await saveBatches(updates);
-            setBatches(prev => prev.map(b => updates.find(u => u.id === b.id) || b));
-            setArchiveBatchModalOpen(false);
-            setGroupActionTarget(null);
-        } catch (error) {
-            alert('حدث خطأ أثناء تحديث حالة السنة الدراسية');
-        }
     };
 
     const handleConfirmDeleteBatch = async () => {
@@ -946,15 +898,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         try {
             if (groupActionTarget.male) await deleteBatchData(groupActionTarget.male.id);
             if (groupActionTarget.female) await deleteBatchData(groupActionTarget.female.id);
-            
             setBatches(prev => prev.filter(b => b.id !== groupActionTarget.male?.id && b.id !== groupActionTarget.female?.id));
             await onRefreshStudents();
-            setDeleteBatchModalOpen(false);
-            setGroupActionTarget(null);
-            alert('تم حذف الدفعة بشطريها بنجاح');
-        } catch (error) {
-             alert('حدث خطأ أثناء حذف بيانات الدفعة');
-        }
+            setDeleteBatchModalOpen(false); setGroupActionTarget(null);
+            toast.success('تم حذف الدفعة بشطريها بنجاح');
+        } catch (error) { toast.error('حدث خطأ أثناء الحذف'); }
     };
 
     const handleConfirmDeleteStudents = async () => {
@@ -1904,7 +1852,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                         </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {groups.map((group) => {
-                                            const members = students.filter(s => s.groupId === group.id);
+                                            const members = students.filter(s => s.groupId === group.id).sort((a, b) => (Number(a.serialNumber) || 0) - (Number(b.serialNumber) || 0));
                                             const leader = members.find(s => s.isLeader);
                                             return (
                                                 <div key={group.id} className={`backdrop-blur-xl border p-6 rounded-[2rem] transition-all duration-300 transform-gpu group ${isRamadanMode ? 'ramadan-card hover:border-yellow-500/40' : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600'}`}>
