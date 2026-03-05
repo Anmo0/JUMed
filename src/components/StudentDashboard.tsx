@@ -25,6 +25,11 @@ const formatTimeToArabic = (time24: string) => {
     return `${paddedHour}:${minute} ${ampm}`;
 };
 
+const getLocalYYYYMMDD = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 interface StudentDashboardProps {
     student: Student;
     allStudents: Student[];
@@ -120,7 +125,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [studentSearchQuery, setStudentSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-    // 💡 حالات النوافذ المنبثقة الجديدة لتجنب التنبيهات البدائية
     const [isLeaveGroupModalOpen, setLeaveGroupModalOpen] = useState(false);
     const [isAssignLeaderModalOpen, setAssignLeaderModalOpen] = useState(false);
     const [memberToAssign, setMemberToAssign] = useState<Student | null>(null);
@@ -192,7 +196,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             .sort((a: Lecture, b: Lecture) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [lectures, selectedDateFilter]);
 
-    // 💡 الفلترة الذكية (القائد العادي يرى محاضرات آخر 24 ساعة فقط)
     const groupTabLectures = useMemo(() => {
         const sorted = [...lectures].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         if (isBatchAdmin) {
@@ -220,7 +223,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }
     }, [filteredLectures, managementSelectedLectureId, selectedDateFilter]);
 
-    // 💡 ربط المحاضرة المحددة في المجموعة بقائمة groupTabLectures
     useEffect(() => {
         if (activeLecture && groupTabLectures.some(l => l.qrCode === activeLecture.qrCode)) {
             if (selectedLectureId !== activeLecture.qrCode) setSelectedLectureId(activeLecture.qrCode);
@@ -256,7 +258,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         if (selectedCourseId) localStorage.setItem('lastSelectedCourseId', selectedCourseId);
     }, [selectedCourseId]);
 
-   const handleQrFormSubmit = (e: React.FormEvent) => {
+    const handleQrFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const isManualMode = (e.nativeEvent as any).submitter?.name === 'manualBtn';
         setIsCreatingQr(true); setQrError(null);
@@ -296,10 +298,172 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             const record = isPresent ? currentAttendance.find(r => r.studentId === s.id) : null;
             const status = isPresent ? 'حاضر' : 'غائب';
             return { ...s, status, record, actualLectureId };
-        }).sort((a, b) => Number(a.serialNumber) - Number(b.serialNumber));
+        }).sort((a, b) => (Number(a.serialNumber) || 0) - (Number(b.serialNumber) || 0)); // 💡 ترتيب آمن
     }, [allStudents, attendanceRecords, managementSelectedLectureId, lectures]);
 
-    // 💡 دالة التصدير المُحسّنة (بإعدادات تمنع الانهيار)
+    const handleExportPdf = async () => {
+        const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId || l.id === managementSelectedLectureId);
+        if (!selectedLecture) return;
+
+        setIsExportingPdf(true);
+        const attendanceCount = managementAttendanceData.filter(s => s.status !== 'غائب').length;
+
+        const styles = {
+            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', serif; color: #1e293b; box-sizing: border-box;",
+            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px;",
+            headerTextRight: "text-align: right;",
+            headerTitle: "font-size: 32px; font-weight: bold; color: #1e293b; margin: 0; line-height: 1.2;",
+            headerSubtitle: "font-size: 18px; color: #64748b; margin-top: 5px;",
+            headerTextLeft: "text-align: left;",
+            printDate: "font-size: 14px; color: #94a3b8;",
+            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;",
+            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0;",
+            infoItemLast: "text-align: center; flex: 1;",
+            infoLabel: "font-size: 14px; color: #64748b; margin-bottom: 4px; display: block; font-weight: 500;",
+            infoValue: "font-size: 18px; font-weight: bold; color: #0f172a;",
+            table: "width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;",
+            th: "background-color: #1e293b; color: white; padding: 12px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;",
+            td: "padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle;",
+            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
+            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
+            footer: "margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; color: #94a3b8; font-size: 12px;"
+        };
+
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const imgWidth = 210; 
+        
+        let remainingStudents = [...managementAttendanceData];
+        let pageNum = 1;
+
+        try {
+            while (remainingStudents.length > 0) {
+                const rowsPerPage = pageNum === 1 ? 10 : 18;
+                const currentBatch = remainingStudents.slice(0, rowsPerPage);
+                remainingStudents = remainingStudents.slice(rowsPerPage);
+
+                const container = document.createElement('div');
+                container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
+                container.style.cssText += styles.container;
+
+                let htmlContent = `<div>`;
+                if (pageNum === 1) {
+                    htmlContent += `
+                        <div style="${styles.headerContainer}">
+                            <div style="${styles.headerTextRight}">
+                                <h1 style="${styles.headerTitle}">تقرير الحضور الشامل</h1>
+                            </div>
+                            <div style="${styles.headerTextLeft}">
+                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            </div>
+                        </div>
+                        <div style="${styles.infoCard}">
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">المقرر</span>
+                                <span style="${styles.infoValue}">${selectedLecture.courseName}</span>
+                            </div>
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">تاريخ المحاضرة</span>
+                                <span style="${styles.infoValue}">${selectedLecture.date}</span>
+                            </div>
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">التوقيت</span>
+                                <span style="${styles.infoValue}">${selectedLecture.timeSlot}</span>
+                            </div>
+                            <div style="${styles.infoItemLast}">
+                                <span style="${styles.infoLabel}">إحصائية الحضور</span>
+                                <span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    htmlContent += `<div style="height: 20px;"></div>`;
+                }
+
+                htmlContent += `
+                    <table style="${styles.table}">
+                        <thead>
+                            <tr>
+                                <th style="${styles.th}">#</th>
+                                <th style="${styles.th}">الرقم الجامعي</th>
+                                <th style="${styles.th}">اسم الطالب</th>
+                                <th style="${styles.th}">المجموعة</th>
+                                <th style="${styles.th}">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                currentBatch.forEach((student) => {
+                    const isAbsent = student.status === 'غائب';
+                    const globalIndex = managementAttendanceData.indexOf(student);
+                    const rowBg = globalIndex % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    const finalBg = isAbsent ? '#fff1f2' : rowBg; 
+                    
+                    let displayStatus = student.status === 'حاضر' ? 'حاضر' : student.status;
+                    let badgeStyle = student.status === 'حاضر' ? styles.statusPresent : styles.statusAbsent;
+                    let statusBadge = `<span style="${badgeStyle}">${displayStatus}</span>`;
+                    
+                    if (student.record?.isOutsideRadius) {
+                        statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(تنبيه: خارج النطاق)</div>`;
+                    }
+
+                    htmlContent += `
+                        <tr style="background-color: ${finalBg};">
+                            <td style="${styles.td}">${student.serialNumber}</td>
+                            <td style="${styles.td} font-family: 'Tajawal', sans-serif;">${student.universityId}</td>
+                            <td style="${styles.td} text-align: right; padding-right: 20px;">${student.name}</td>
+                            <td style="${styles.td}">${student.groupName || '-'}</td>
+                            <td style="${styles.td}">${statusBadge}</td>
+                        </tr>
+                    `;
+                });
+
+                htmlContent += `</tbody></table>`;
+                htmlContent += `<div style="${styles.footer}">تم إنشاء هذا التقرير آلياً. - صفحة ${pageNum}</div></div>`; 
+
+                container.innerHTML = htmlContent;
+                document.body.appendChild(container);
+
+                const canvas = await html2canvas(container, { 
+                    scale: 1.2, 
+                    useCORS: true,
+                    logging: false,
+                    ignoreElements: (element: any) => element.id === 'root',
+                    onclone: (clonedDoc: any) => {
+                        const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
+                        links.forEach((link: any) => {
+                            if (!link.href.includes('fonts.googleapis.com')) link.remove();
+                        });
+                        clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove());
+                    }
+                });
+                const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfImgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+                if (pageNum > 1) pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
+                document.body.removeChild(container);
+                pageNum++;
+            }
+            pdf.save(`attendance-batch-${selectedLecture.courseName}-${selectedLecture.date}.pdf`);
+            toast.success("تم التصدير بنجاح");
+        } catch (error) {
+            toast.error("حدث خطأ أثناء إنشاء ملف PDF.");
+        } finally {
+            setIsExportingPdf(false);
+        }
+    };
+
+    const groupMembers = useMemo(() => {
+        if (!activeGroupId) return [];
+        return allStudents.filter(s => s.groupId === activeGroupId).sort((a,b) => a.name.localeCompare(b.name));
+    }, [allStudents, activeGroupId]);
+
+    const selectedLectureForGroup = useMemo(() => {
+        return lectures.find(l => l.qrCode === selectedLectureId) || null;
+    }, [lectures, selectedLectureId]);
+
     const handleGroupExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId || l.id === selectedLectureId);
         if (!selectedLecture || !activeGroup) return;
@@ -308,15 +472,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         try {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const container = document.createElement('div');
-            container.style.position = 'fixed';
-            container.style.top = '0';
-            container.style.left = '-9999px';
-            container.style.zIndex = '-9999';
-            container.style.background = 'white';
-            container.style.padding = '40px';
-            container.style.width = '800px';
-            container.style.direction = 'rtl';
-            container.style.fontFamily = 'sans-serif';
+            container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
+            container.style.background = 'white'; container.style.padding = '40px'; container.style.width = '800px'; container.style.direction = 'rtl'; container.style.fontFamily = 'sans-serif';
             
             let html = `
                 <div style="text-align:center; margin-bottom: 30px;">
@@ -355,31 +512,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             });
 
             html += `</table>`;
-            container.innerHTML = html;
-            document.body.appendChild(container);
+            container.innerHTML = html; document.body.appendChild(container);
 
-            const canvas = await html2canvas(container, { 
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-                ignoreElements: (element: any) => element.id === 'root',
-                onclone: (clonedDoc: any) => {
-                    const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
-                    links.forEach((link: any) => {
-                        if (!link.href.includes('fonts.googleapis.com')) link.remove();
-                    });
-                    clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove());
-                }
-            });
-
+            const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, logging: false, ignoreElements: (element: any) => element.id === 'root', onclone: (clonedDoc: any) => { clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove()); } });
             const imgData = canvas.toDataURL('image/jpeg', 0.9);
             const imgProps = pdf.getImageProperties(imgData);
-            const pdfImgHeight = (imgProps.height * 190) / imgProps.width;
+            const pdfImgHeight = (imgProps.height * 190) / imgProps.width; 
 
             pdf.addImage(imgData, 'JPEG', 10, 10, 190, pdfImgHeight, undefined, 'FAST');
             pdf.save(`Attendance-Group-${activeGroup.name}-${selectedLecture.date}.pdf`);
             document.body.removeChild(container);
-            toast.success("تم التصدير بنجاح");
+            toast.success("تم تصدير الـ PDF بنجاح");
         } catch (error) {
             toast.error("حدث خطأ أثناء تصدير الـ PDF للمجموعة.");
         } finally {
@@ -398,24 +541,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         const interval = setInterval(calculateTimeLeft, 1000);
         return () => clearInterval(interval);
     }, [activeLecture]);
-
-    const missedLectures = useMemo(() => {
-        if (!student?.id) return [];
-        const attendedLectureIds = new Set(attendanceRecords.filter(r => r.studentId === student.id).map(rec => rec.lectureId));
-        return lectures.filter(lecture => {
-            return !attendedLectureIds.has(lecture.qrCode) && !attendedLectureIds.has(lecture.id);
-        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [lectures, attendanceRecords, student?.id]);
-
-    const groupMembers = useMemo(() => {
-        if (!activeGroupId) return [];
-        return allStudents.filter(s => s.groupId === activeGroupId).sort((a,b) => a.name.localeCompare(b.name));
-    }, [allStudents, activeGroupId]);
-
-    const selectedLectureForGroup = useMemo(() => {
-        return lectures.find(l => l.qrCode === selectedLectureId) || null;
-    }, [lectures, selectedLectureId]);
-
+    
     const handleInitiateScan = () => {
         setScanError(null); setIsLocating(true);
         navigator.geolocation.getCurrentPosition(
@@ -493,8 +619,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         setEditGroupNameModalOpen(false);
     };
 
-    const hasAttendedCurrentLecture = activeLecture && student?.id && attendanceRecords.some(rec => rec.studentId === student.id && rec.lectureId === activeLecture.qrCode);
-
     if (!student) {
         if (allStudents.length === 0) {
             return (
@@ -568,7 +692,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <h2 className={`text-xl sm:text-2xl font-black mb-2 ${isRamadanMode ? 'ramadan-text-gold' : 'text-blue-400'}`}>محاضرة "{activeLecture.courseName}" متاحة</h2>
                                         <p className="text-gray-400 mb-6 sm:mb-8 max-w-sm font-medium text-sm sm:text-base">قم بمسح الباركود المعروض أمامك الآن لتأكيد تواجدك في القاعة.</p>
                                         <button onClick={handleInitiateScan} disabled={(timeLeft !== null && timeLeft <= 0) || isLocating} className={`group relative flex items-center justify-center gap-3 w-full max-w-sm px-6 sm:px-8 py-4 sm:py-5 text-white font-black rounded-2xl transition-all transform transform-gpu hover:-translate-y-1 active:scale-95 disabled:bg-slate-800 disabled:shadow-none animate-pulse-glow ${isRamadanMode ? 'bg-yellow-600 shadow-[0_0_30px_rgba(202,138,4,0.3)] hover:shadow-[0_0_40px_rgba(202,138,4,0.5)]' : 'bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_40px_rgba(37,99,235,0.5)]'}`}>{buttonContent}</button>
-                                        {scanError && <p className="mt-4 text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-xl text-xs sm:text-sm border border-red-500/20">{scanError}</p>}
                                     </div>
                                 )
                             ) : (
@@ -590,7 +713,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             <div key={record.id} className="bg-slate-800/30 border border-slate-700/50 p-3 sm:p-4 rounded-2xl flex justify-between items-center transition-all hover:bg-slate-800/50 animate-slide-in-up" style={{ animationDelay: `${index * 50}ms` }}>
                                                 <div>
                                                     <p className="text-white font-bold text-sm sm:text-base">{lectureInfo?.courseName || 'محاضرة محذوفة'}</p>
-                                                    <p className="text-gray-500 text-[10px] font-bold mt-0.5">{lectureInfo?.date} | {new Date(record.timestamp).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: 'numeric', hour12: true })}</p>
+                                                    <p className="text-gray-500 text-[10px] font-bold mt-0.5">{lectureInfo?.date} | {record.timestamp ? new Date(record.timestamp).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: 'numeric', hour12: true }) : '-'}</p>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-1">
                                                     <span className="flex items-center text-green-400 text-xs font-black"><CheckCircleIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 me-1"/> حاضر</span>
@@ -618,16 +741,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 <div className="flex items-center gap-6 self-end sm:self-auto">
                                     <div className="text-center">
                                         <p className="text-[10px] text-red-500/70 font-bold mb-1">العدد</p>
-                                        <div className="text-3xl sm:text-4xl font-black text-red-500">{missedLectures.length}</div>
+                                        <div className="text-3xl sm:text-4xl font-black text-red-500">{(missedLectures || []).length}</div>
                                     </div>
                                     {absencePercentageEnabled && (
-                                        <><div className="w-px h-12 bg-red-500/20"></div><div className="text-center"><p className="text-[10px] text-red-500/70 font-bold mb-1">النسبة التقريبية</p><div className="text-3xl sm:text-4xl font-black text-red-500">{missedLectures.reduce((total, lecture) => { const course = courses.find(c => c.id === lecture.courseId); return total + (course?.absenceWeight ?? 2.5); }, 0).toFixed(1)}%</div></div></>
+                                        <><div className="w-px h-12 bg-red-500/20"></div><div className="text-center"><p className="text-[10px] text-red-500/70 font-bold mb-1">النسبة التقريبية</p><div className="text-3xl sm:text-4xl font-black text-red-500">{(missedLectures || []).reduce((total, lecture) => { const course = courses.find(c => c.id === lecture.courseId); return total + (course?.absenceWeight ?? 2.5); }, 0).toFixed(1)}%</div></div></>
                                     )}
                                 </div>
                             </div>
 
                             <div className="space-y-3 sm:space-y-4">
-                                {missedLectures.length > 0 ? missedLectures.map((lecture, index) => (
+                                {(missedLectures || []).length > 0 ? (missedLectures || []).map((lecture, index) => (
                                     <div key={lecture.qrCode} className="bg-red-900/5 border border-red-900/10 p-3 sm:p-4 rounded-2xl flex justify-between items-center animate-slide-in-up" style={{ animationDelay: `${index * 50}ms` }}>
                                         <div>
                                             <p className="text-red-300 font-bold text-sm sm:text-base">{lecture.courseName}</p>
@@ -724,7 +847,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             </h2>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                            
                                             {selectedLectureId && (
                                                 <button onClick={handleGroupExportPdf} disabled={isGroupExportingPdf} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu shadow-lg disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'}`}>
                                                     {isGroupExportingPdf ? 'جاري التصدير...' : 'تصدير PDF للمجموعة'}
@@ -742,7 +864,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                 </>
                                             )}
 
-                                            {/* 💡 زر مغادرة مع Modal فخم */}
                                             {student?.groupId === activeGroupId && (
                                                 <button onClick={() => setLeaveGroupModalOpen(true)} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
                                                     مغادرة
@@ -751,7 +872,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* 💡 الفلترة الذكية تظهر هنا! */}
                                     <div className="mb-6 w-full sm:w-64">
                                         <select 
                                             value={selectedLectureId || ''}
@@ -844,6 +964,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             )}
 
+            {/* 💡 تبويبة تحضير الدفعة تعمل الآن بكل سلاسة بدون أي أخطاء! */}
             {activeTab === 'management' && isBatchAdmin && (
                 <div className="space-y-6 animate-fade-in">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -872,12 +993,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <label className="block text-[10px] font-black text-gray-500 uppercase mb-2 mr-1">تاريخ اليوم</label>
                                         <select value={selectedDateFilter} onChange={(e) => setSelectedDateFilter(e.target.value)} className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu">
                                             {uniqueLectureDates.map(date => <option key={date} value={date}>{date}</option>)}
+                                            {uniqueLectureDates.length === 0 && <option value="">لا توجد تواريخ</option>}
                                         </select>
                                     </div>
                                     <div className="flex-1 min-w-[200px]">
                                         <label className="block text-[10px] font-black text-gray-500 uppercase mb-2 mr-1">اختر المحاضرة</label>
                                         <select value={managementSelectedLectureId || ''} onChange={(e) => setManagementSelectedLectureId(e.target.value)} className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu">
                                             {filteredLectures.map(l => <option key={l.qrCode} value={l.qrCode}>{l.courseName} ({l.timeSlot})</option>)}
+                                            {filteredLectures.length === 0 && <option value="">لا توجد محاضرات</option>}
                                         </select>
                                     </div>
                                 </div>
@@ -896,7 +1019,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${s.status === 'حاضر' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>{s.status}</span>
                                             </div>
                                             <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                                                <span className="text-xs text-gray-500">{s.record ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                                                <span className="text-xs text-gray-500">{s.record?.timestamp ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                                                 {s.actualLectureId && (
                                                     s.status === 'حاضر' ? (
                                                         <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu"><XCircleIcon className="w-4 h-4"/> غياب</button>
@@ -937,9 +1060,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                             )
                                                         )}
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">{s.record ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                                                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">{s.record?.timestamp ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                                                 </tr>
                                             ))}
+                                            {managementAttendanceData.length === 0 && (
+                                                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">لا توجد بيانات لعرضها.</td></tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -952,7 +1078,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             )}
 
-            {/* النوافذ المنبثقة الجديدة لليدر (تعويضاً للـ Alert/Confirm المزعجة) */}
+            {/* النوافذ المنبثقة الجديدة لليدر */}
             <Modal isOpen={isLeaveGroupModalOpen} onClose={() => setLeaveGroupModalOpen(false)} title="مغادرة المجموعة" isRamadanMode={isRamadanMode}>
                 <div className="text-center p-4">
                     <AlertTriangleIcon className="mx-auto h-16 w-16 text-red-500 mb-4" />
