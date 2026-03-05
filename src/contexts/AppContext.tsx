@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
+import toast from 'react-hot-toast'; // 👈 استيراد الإشعارات الأنيقة
 import { User, Student, Batch, Lecture, AttendanceRecord, Group, Course, UserRole } from '../types';
 import { 
   getAttendance, 
@@ -28,7 +29,7 @@ import {
   clearAllAttendance as apiClearAllAttendance,
   clearAllLectures as apiClearAllLectures,
   recalculateAllSerialNumbers as apiRecalculateAllSerialNumbers,
-  clearLectureAttendance as apiClearLectureAttendance // 👈 تم إضافة هذا الاستيراد لحل المشكلة
+  clearLectureAttendance as apiClearLectureAttendance
 } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { useSession } from '../hooks/useSession';
@@ -146,6 +147,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
     }, []);
 
+  // 💡 نظام المزامنة الذكي (وضع عدم الاتصال)
+  useEffect(() => {
+    const syncOfflineData = async () => {
+        const offlineData = localStorage.getItem('anmo_offline_attendance');
+        if (offlineData) {
+            try {
+                const records: Omit<AttendanceRecord, 'id'>[] = JSON.parse(offlineData);
+                if (records.length > 0) {
+                    toast.loading('عاد الاتصال! جاري مزامنة سجلات الحضور...', { id: 'sync' });
+                    
+                    const result = await apiAddBulkAttendanceRecords(records);
+                    
+                    if (!result.error) {
+                        localStorage.removeItem('anmo_offline_attendance');
+                        toast.success('تمت مزامنة البيانات بنجاح!', { id: 'sync' });
+                        // سحب البيانات من السيرفر للحصول على المعرفات الحقيقية
+                        const updatedAttendance = await getAttendance();
+                        updateState({ attendance: updatedAttendance });
+                    } else {
+                        toast.error('فشلت المزامنة، سنحاول لاحقاً.', { id: 'sync' });
+                    }
+                }
+            } catch (e) {
+                localStorage.removeItem('anmo_offline_attendance');
+            }
+        }
+    };
+
+    window.addEventListener('online', syncOfflineData);
+    if (navigator.onLine) syncOfflineData();
+
+    return () => window.removeEventListener('online', syncOfflineData);
+  }, [updateState]);
+
   // Load initial global data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -157,15 +192,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           getDeviceBindingSetting(),
           getAbsencePercentageSetting(),
           getBatches(),
-          getAbsenceWeightSetting() // 👈 الإضافة هنا
+          getAbsenceWeightSetting()
         ]);
 
         let locationEnabled = false;
         try {
             if (getLocationRestrictionSetting) {
                 locationEnabled = await getLocationRestrictionSetting();
-            } else {
-                console.warn('getLocationRestrictionSetting is not defined');
             }
         } catch (e: any) {
             console.error('Error fetching location restriction setting:', e?.message || String(e));
@@ -225,7 +258,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             creditHours: c.credit_hours,
             weeks: c.weeks,
             absenceLimit: c.absence_limit || 25,
-            absenceWeight: c.absence_weight ?? 2.5, // 👈 التعديل هنا: توجيه الموقع لقراءة الوزن المحفوظ
+            absenceWeight: c.absence_weight ?? 2.5,
             createdAt: c.created_at
         }));
 
@@ -300,7 +333,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [state.selectedBatchId, updateState]);
 
-  // Computed Values
   const filteredStudents = useMemo(() => {
       const students = state.students || [];
       if (!state.selectedBatchId) return students;
@@ -331,7 +363,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const currentBatch = (state.batches || []).find(b => b.id === state.selectedBatchId);
   const studentCourses = state.courses || [];
 
-  // Actions
   const selectBatch = useCallback((batchId: string | null) => {
     updateState({ selectedBatchId: batchId });
     if (batchId) {
@@ -360,46 +391,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, [updateState]);
 
-  // Mutations
   const addStudent = useCallback(async (data: Omit<Student, 'id'>) => {
     if (!state.selectedBatchId) {
-        alert('يرجى اختيار الدفعة أولاً');
+        toast.error('يرجى اختيار الدفعة أولاً');
         return;
     }
     const payload = { ...data, batchId: state.selectedBatchId };
     const { data: newStudent, error } = await apiAddStudent(payload);
     if (error) {
-        alert(error);
+        toast.error(error);
         return;
     }
     if (newStudent) {
       updateState(prev => ({ students: [...(prev.students || []), newStudent] }));
+      toast.success('تمت إضافة الطالب بنجاح');
     }
   }, [state.selectedBatchId, updateState]);
 
   const updateStudent = useCallback(async (id: string, updates: Partial<Student>) => {
     const { data: updatedStudent, error } = await apiUpdateStudent(id, updates);
     if (error) {
-        alert(error);
+        toast.error(error);
         return;
     }
     if (updatedStudent) {
       updateState(prev => ({
         students: (prev.students || []).map(s => s.id === id ? { ...s, ...updatedStudent } : s)
       }));
+      toast.success('تم تحديث بيانات الطالب');
     }
   }, [updateState]);
 
   const deleteStudent = useCallback(async (id: string) => {
     const { error } = await apiDeleteStudent(id);
     if (error) {
-        alert(error);
+        toast.error(error);
         return;
     }
     updateState(prev => ({
       students: (prev.students || []).filter(s => s.id !== id),
       attendance: (prev.attendance || []).filter(a => a.studentId !== id),
     }));
+    toast.success('تم حذف الطالب بنجاح');
   }, [updateState]);
 
   const updateGroupName = useCallback((groupId: string, newName: string) => {
@@ -413,9 +446,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!state.selectedBatchId || !user) return;
     const { data, error } = await apiCreateGroup(groupName, state.selectedBatchId, user.id);
     if (error) {
-        alert(error);
+        toast.error(error);
     } else if (data) {
         updateState(prev => ({ groups: [...(prev.groups || []), data] }));
+        toast.success(`تم إنشاء مجموعة "${groupName}"`);
     }
   }, [state.selectedBatchId, user, updateState]);
 
@@ -477,6 +511,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             } else if (newLecture) {
                 updateState(prev => ({ lectures: [...prev.lectures, newLecture] }));
                 callbacks.onSuccess();
+                toast.success('تم إنشاء المحاضرة بنجاح!');
             } else {
                 callbacks.onError("فشل حفظ المحاضرة في قاعدة البيانات.");
             }
@@ -491,17 +526,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const deleteLecture = useCallback(async (lectureId: string) => {
       const { error } = await apiDeleteLecture(lectureId);
       if (error) {
-          alert(error);
+          toast.error(error);
       } else {
           updateState(prev => ({
               lectures: (prev.lectures || []).filter(l => l.id !== lectureId && l.qrCode !== lectureId),
               attendance: (prev.attendance || []).filter(a => a.lectureId !== lectureId && a.lectureId !== lectureId)
           }));
-          alert('تم حذف المحاضرة بنجاح');
+          toast.success('تم حذف المحاضرة بنجاح');
       }
   }, [updateState]);
 
-  // 💡 الدالة المحدثة التي تستخدم apiClearLectureAttendance المستوردة في الأعلى
   const clearLectureAttendance = useCallback(async (lectureIdentifier: string) => {
       const lecture = state.lectures.find(l => l.id === lectureIdentifier || l.qrCode === lectureIdentifier);
       const actualId = lecture?.id || lectureIdentifier;
@@ -510,15 +544,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { error } = await apiClearLectureAttendance(lectureIdentifier);
       
       if (error) {
-          alert(error);
+          toast.error(error);
       } else {
           updateState(prev => ({
               attendance: (prev.attendance || []).filter(a => a.lectureId !== actualId && a.lectureId !== actualQr)
           }));
-          alert('تم مسح تحضير هذه المحاضرة بنجاح.');
+          toast.success('تم مسح تحضير هذه المحاضرة بنجاح.');
       }
   }, [state.lectures, updateState]);
 
+  // 💡 التحضير اليدوي مع دعم وضع عدم الاتصال
   const manualAttendance = useCallback(async (studentId: string, lectureId: string) => {
       const student = filteredStudents.find(s => s.id === studentId);
       const lecture = filteredLectures.find(l => l.id === lectureId || l.qrCode === lectureId);
@@ -534,9 +569,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
           manualEntry: true,
           distance: 0,
       };
+
+      if (!navigator.onLine) {
+          const offlineQueue = JSON.parse(localStorage.getItem('anmo_offline_attendance') || '[]');
+          offlineQueue.push(newRecordData);
+          localStorage.setItem('anmo_offline_attendance', JSON.stringify(offlineQueue));
+          
+          const fakeRecord = { ...newRecordData, id: `temp-${Date.now()}` };
+          updateState(prev => ({ attendance: [...(prev.attendance || []), fakeRecord as AttendanceRecord] }));
+          toast.success(`تم تحضير ${student.name} محلياً (لا يوجد اتصال)`);
+          return;
+      }
+
       const { data: newRecord, error } = await apiAddAttendanceRecord(newRecordData);
-      if (!error && newRecord) {
+      if (error) {
+          toast.error(error);
+      } else if (newRecord) {
           updateState(prev => ({ attendance: [...(prev.attendance || []), newRecord] }));
+          toast.success(`تم تحضير ${student.name} يدوياً`);
       }
   }, [filteredStudents, filteredLectures, updateState]);
 
@@ -549,6 +599,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [updateState]);
 
+  // 💡 مسح الباركود مع دعم وضع عدم الاتصال
   const recordAttendance = useCallback(async (location: { latitude: number; longitude: number }): Promise<{ success: boolean, message: string }> => {
       let activeUserId = user?.id;
       const localUserStr = localStorage.getItem('anmo_current_user');
@@ -580,6 +631,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isOutsideRadius: isOutsideRadius,
           distance: Math.round(distance),
       };
+
+      if (!navigator.onLine) {
+          const offlineQueue = JSON.parse(localStorage.getItem('anmo_offline_attendance') || '[]');
+          offlineQueue.push(newRecordData);
+          localStorage.setItem('anmo_offline_attendance', JSON.stringify(offlineQueue));
+          
+          const fakeRecord = { ...newRecordData, id: `temp-${Date.now()}` };
+          updateState(prev => ({ attendance: [...prev.attendance, fakeRecord as AttendanceRecord] }));
+          return { success: true, message: "تم تسجيل حضورك محلياً لعدم وجود اتصال. ستتم المزامنة لاحقاً." };
+      }
       
       const { data: newRecord, error } = await apiAddAttendanceRecord(newRecordData);
 
@@ -637,7 +698,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (result.data) {
               updateState(prev => ({ attendance: [...(prev.attendance || []), ...result.data] }));
           }
-          return { success: true, message: `تم بنجاح تكرار حضور ${newRecords.length} طالب!` };
+          toast.success(`تم بنجاح تكرار حضور ${newRecords.length} طالب!`);
+          return { success: true, message: `تم التكرار بنجاح` };
       } catch (err: any) {
           return { success: false, message: `حدث خطأ في النظام: ${err.message}` };
       }
@@ -649,29 +711,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateState(prev => ({
             students: (prev.students || []).map(s => s.id === studentId ? updatedStudent : s)
         }));
+        toast.success('تم إلغاء ربط جهاز الطالب');
     }
   }, [updateState]);
 
   const resetAllDevices = useCallback(async () => {
     const { error } = await apiResetAllStudentsDevices();
     if (error) {
-        alert(error);
+        toast.error(error);
     } else {
         updateState(prev => ({
             students: (prev.students || []).map(s => ({ ...s, deviceInfo: undefined }))
         }));
-        alert('تم إلغاء ربط جميع الأجهزة بنجاح.');
+        toast.success('تم إلغاء ربط جميع الأجهزة بنجاح.');
     }
   }, [updateState]);
 
   const toggleDeviceBinding = useCallback(async (enabled: boolean) => {
     await apiSetDeviceBindingSetting(enabled);
     updateState({ deviceBindingEnabled: enabled });
+    toast.success(enabled ? 'تم تفعيل ربط الأجهزة' : 'تم تعطيل ربط الأجهزة');
   }, [updateState]);
 
   const toggleAbsencePercentage = useCallback(async (enabled: boolean) => {
     await apiSetAbsencePercentageSetting(enabled);
     updateState({ absencePercentageEnabled: enabled });
+    toast.success(enabled ? 'تم تفعيل نسبة الغياب' : 'تم تعطيل نسبة الغياب');
   }, [updateState]);
 
   const updateAbsenceWeight = useCallback(async (weight: number) => {
@@ -682,31 +747,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clearAllAttendance = useCallback(async () => {
     const { error } = await apiClearAllAttendance();
     if (error) {
-        alert(error);
+        toast.error(error);
     } else {
         updateState({ attendance: [] });
-        alert('تم مسح جميع سجلات الحضور بنجاح.');
+        toast.success('تم مسح جميع سجلات الحضور بنجاح.');
     }
   }, [updateState]);
 
   const clearAllLectures = useCallback(async () => {
     const { error } = await apiClearAllLectures();
     if (error) {
-        alert(error);
+        toast.error(error);
     } else {
         updateState({ attendance: [], lectures: [] });
-        alert('تم مسح جميع المحاضرات والسجلات بنجاح.');
+        toast.success('تم مسح جميع المحاضرات والسجلات بنجاح.');
     }
   }, [updateState]);
 
   const recalculateSerials = useCallback(async () => {
-    if (!confirm('هل أنت متأكد من رغبتك في إعادة احتساب الأرقام التسلسلية لجميع الطلاب؟ سيتم ترتيبهم حسب الرقم الجامعي.')) return;
+    if (!window.confirm('هل أنت متأكد من رغبتك في إعادة احتساب الأرقام التسلسلية لجميع الطلاب؟ سيتم ترتيبهم حسب الرقم الجامعي.')) return;
+    toast.loading('جاري التحديث...', { id: 'serial' });
     await apiRecalculateAllSerialNumbers();
     if (state.selectedBatchId) {
         const updatedStudents = await getStudents(state.selectedBatchId);
         updateState({ students: updatedStudents });
     }
-    alert('تم تحديث الأرقام التسلسلية بنجاح.');
+    toast.success('تم تحديث الأرقام التسلسلية بنجاح.', { id: 'serial' });
   }, [state.selectedBatchId, updateState]);
 
   const setBatches = useCallback((action: React.SetStateAction<Batch[]>) => {
@@ -720,6 +786,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toggleLocationRestriction = useCallback(async (enabled: boolean) => {
     await setLocationRestrictionSetting(enabled);
     updateState({ locationRestrictionEnabled: enabled });
+    toast.success(enabled ? 'تم تفعيل قيود الموقع' : 'تم تعطيل قيود الموقع');
   }, [updateState]);
 
   const value: AppContextType = {
