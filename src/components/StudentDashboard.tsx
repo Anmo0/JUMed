@@ -252,6 +252,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             {
                 onSuccess: () => {
                     setQrModalOpen(false);
+                    setIsCreatingQr(false);
+
+                    // 💡 التعديلات الجديدة للانتقال التلقائي:
+                    setSelectedDateFilter(qrForm.date); 
+                    setSelectedLectureId(null); 
+                    setActiveTab('attendance'); 
                 },
                 onError: (message: string) => {
                     setIsCreatingQr(false);

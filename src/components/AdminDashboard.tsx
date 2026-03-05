@@ -358,6 +358,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                 setQrModalOpen(false);
                 setIsCreatingQr(false);
                 setQrForm(p => ({ ...p, lectureName: '' }));
+                
+                // 💡 التعديلات الجديدة للانتقال التلقائي:
+                setSelectedDateFilter(qrForm.date); // التبديل لتاريخ المحاضرة الجديدة
+                setSelectedLectureId(null); // تصفير الاختيار يجبر النظام على التقاط أحدث محاضرة تلقائياً
+                setActiveTab('attendance'); // فتح تبويب الحضور فوراً
             },
             onError: (message: string) => {
                 setIsCreatingQr(false);
