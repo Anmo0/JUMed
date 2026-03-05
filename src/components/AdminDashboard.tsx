@@ -37,7 +37,7 @@ interface AdminDashboardProps {
     setBatches: React.Dispatch<React.SetStateAction<Batch[]>>;
     onAddStudent: (student: Omit<Student, 'id'>) => void;
     onUpdateStudent: (id: string, updates: Partial<Student>) => void;
-    onGenerateQrCode: (details: {date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string}, callbacks: {onSuccess: () => void, onError: (message: string) => void}) => void;
+    onGenerateQrCode: (details: {date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string, isManual?: boolean}, callbacks: {onSuccess: () => void, onError: (message: string) => void}) => void;
     onManualAttendance: (studentId: string, lectureId: string) => void;
     onRemoveAttendance: (studentId: string, lectureId: string) => void;
     onResetStudentDevice: (studentId: string) => void;
@@ -139,7 +139,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         </div>
     );
 
-    const [activeTab, setActiveTab] = useState<'attendance' | 'students' | 'calendar' | 'groups' | 'batches' | 'courses' | 'dashboard'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'attendance' | 'students' | 'calendar' | 'groups' | 'batches' | 'courses' | 'dashboard'>(() => {
+        return (sessionStorage.getItem('adminActiveTab') as any) || 'dashboard';
+    });
+
+    useEffect(() => {
+        sessionStorage.setItem('adminActiveTab', activeTab);
+    }, [activeTab]);
     const [isPromoteModalOpen, setPromoteModalOpen] = useState(false);
     const [isPromoting, setIsPromoting] = useState(false);
     const [showUndoPromotion, setShowUndoPromotion] = useState(false);

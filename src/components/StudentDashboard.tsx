@@ -94,7 +94,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     absencePercentageEnabled,
     isRamadanMode
 }) => {
-    const [activeTab, setActiveTab] = useState<'personal' | 'group' | 'management'>('personal');
+    const [activeTab, setActiveTab] = useState<'personal' | 'group' | 'management'>(() => {
+        return (sessionStorage.getItem('studentActiveTab') as any) || 'personal';
+    });
+
+    useEffect(() => {
+        sessionStorage.setItem('studentActiveTab', activeTab);
+    }, [activeTab]);
     const [isScannerOpen, setScannerOpen] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
