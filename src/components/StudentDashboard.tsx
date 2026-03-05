@@ -5,6 +5,7 @@ import Modal from './Modal';
 import QRCodeScanner from './QRCodeScanner';
 import QRCodeDisplay from './QRCodeDisplay';
 import { jsPDF } from 'jspdf';
+import AbsenceWarning from './AbsenceWarning'; 
 import html2canvas from 'html2canvas';
 import { 
     getStudentGroup, 
@@ -725,7 +726,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
              </div>
 
             {activeTab === 'personal' && (
-                <div className="space-y-6 sm:space-y-8">
+                <div className="space-y-6 sm:space-y-8 animate-fade-in">
+                    
+                    {/* 💡 مكون التنبيه الذكي الجديد للحرمان */}
+                    <AbsenceWarning 
+                        courses={courses}
+                        lectures={lectures}
+                        attendanceRecords={attendanceRecords}
+                        studentId={student.id}
+                        isRamadanMode={isRamadanMode}
+                    />
+
                     <div className={`backdrop-blur-2xl border rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-10 shadow-2xl animate-slide-in-up transition-all duration-500 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6 mb-8 sm:mb-10">
                             <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>تسجيل الحضور</h2>
@@ -785,7 +796,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             <div className="space-y-3 sm:space-y-4">
                                 {attendanceRecords.filter(r => r.studentId === student.id).length > 0 ? (
                                     [...attendanceRecords].filter(r => r.studentId === student.id).reverse().slice(0, 10).map((record, index) => {
-                                        const lectureInfo = lectures.find(l => l.qrCode === record.lectureId);
+                                        const lectureInfo = lectures.find(l => l.qrCode === record.lectureId || l.id === record.lectureId);
                                         return (
                                             <div key={record.id} className="bg-slate-800/30 border border-slate-700/50 p-3 sm:p-4 rounded-2xl flex justify-between items-center transition-all hover:bg-slate-800/50 animate-slide-in-up" style={{ animationDelay: `${index * 50}ms` }}>
                                                 <div>
@@ -834,7 +845,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <>
                                             <div className="w-px h-12 bg-red-500/20"></div>
                                             <div className="text-center">
-                                                <p className="text-[10px] text-red-500/70 font-bold mb-1">النسبة</p>
+                                                <p className="text-[10px] text-red-500/70 font-bold mb-1">النسبة التقريبية</p>
                                                 <div className="text-3xl sm:text-4xl font-black text-red-500">
                                                     {missedLectures.reduce((total, lecture) => {
                                                         const course = courses.find(c => c.id === lecture.courseId);
