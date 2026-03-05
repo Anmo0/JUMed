@@ -4,8 +4,9 @@ import { UserRole } from './types';
 import { login as apiLogin } from './services/api';
 import { supabase } from './services/supabaseClient';
 import Login from './components/Login';
-import AdminDashboard from './components/AdminDashboard';
-import StudentDashboard from './components/StudentDashboard';
+// 💡 استيراد كسول (Lazy Import): لا تحمل الملف إلا عند الحاجة إليه
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
+const StudentDashboard = React.lazy(() => import('./components/StudentDashboard'));
 import { LogOutIcon, LogoIcon, AlertTriangleIcon } from './components/icons';
 import { useTheme } from './hooks/useTheme';
 import { useSession } from './hooks/useSession';
@@ -177,34 +178,37 @@ function AppContent() {
                 </header>
             )}
             <main>
-                {currentUser.role === UserRole.Admin ? (
-                    <AdminDashboard 
-                        batches={batches || []} setBatches={setBatches} students={safeStudents} groups={safeGroups}
-                        attendanceRecords={safeAttendanceRecords} lectures={safeLectures} courses={safeCourses} setCourses={setCourses}
-                        onAddStudent={addStudent} onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName}
-                        onAddGroupLocal={addGroupLocal} onDeleteAllGroupsLocal={deleteAllGroupsLocal}
-                        onGenerateQrCode={generateQrCode} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
-                        onResetStudentDevice={resetStudentDevice} onResetAllDevices={resetAllDevices}
-                        onRepeatPreviousAttendance={repeatPreviousAttendance} onDeleteLecture={deleteLecture} onDeleteStudent={deleteStudent}
-                        deviceBindingEnabled={deviceBindingEnabled} onToggleDeviceBinding={toggleDeviceBinding}
-                        absencePercentageEnabled={absencePercentageEnabled} onToggleAbsencePercentage={toggleAbsencePercentage}
-                        locationRestrictionEnabled={locationRestrictionEnabled} onToggleLocationRestriction={toggleLocationRestriction}
-                        onClearLectureAttendance={clearLectureAttendance} onClearAllAttendance={clearAllAttendance} onClearAllLectures={clearAllLectures}
-                        isRamadanMode={isRamadanMode} selectedBatchId={selectedBatchId} onResetBatch={handleResetBatch} onChangeBatch={selectBatch}
-                        onRecalculateSerials={recalculateSerials} onRefreshStudents={refreshStudents}
-                    />
-                ) : (
-                    <StudentDashboard 
-                        student={safeStudents.find(s => s.id === currentUser?.id)!}
-                        allStudents={safeStudents} attendanceRecords={safeAttendanceRecords}
-                        onRecordAttendance={recordAttendance} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
-                        onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal}
-                        activeLecture={activeLecture} lectures={safeLectures} courses={safeStudentCourses}
-                        onGenerateQrCode={generateQrCode} onDeleteLecture={deleteLecture}
-                        onRepeatPreviousAttendance={repeatPreviousAttendance} onClearLectureAttendance={clearLectureAttendance}
-                        absencePercentageEnabled={absencePercentageEnabled} isRamadanMode={isRamadanMode}
-                    />
-                )}
+                {/* 💡 تعليق العرض حتى يتم تحميل اللوحة المطلوبة فقط، وإظهار التحميل الوهمي في الانتظار */}
+                <React.Suspense fallback={<DashboardSkeleton isRamadanMode={isRamadanMode} />}>
+                    {currentUser.role === UserRole.Admin ? (
+                        <AdminDashboard 
+                            batches={batches || []} setBatches={setBatches} students={safeStudents} groups={safeGroups}
+                            attendanceRecords={safeAttendanceRecords} lectures={safeLectures} courses={safeCourses} setCourses={setCourses}
+                            onAddStudent={addStudent} onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName}
+                            onAddGroupLocal={addGroupLocal} onDeleteAllGroupsLocal={deleteAllGroupsLocal}
+                            onGenerateQrCode={generateQrCode} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
+                            onResetStudentDevice={resetStudentDevice} onResetAllDevices={resetAllDevices}
+                            onRepeatPreviousAttendance={repeatPreviousAttendance} onDeleteLecture={deleteLecture} onDeleteStudent={deleteStudent}
+                            deviceBindingEnabled={deviceBindingEnabled} onToggleDeviceBinding={toggleDeviceBinding}
+                            absencePercentageEnabled={absencePercentageEnabled} onToggleAbsencePercentage={toggleAbsencePercentage}
+                            locationRestrictionEnabled={locationRestrictionEnabled} onToggleLocationRestriction={toggleLocationRestriction}
+                            onClearLectureAttendance={clearLectureAttendance} onClearAllAttendance={clearAllAttendance} onClearAllLectures={clearAllLectures}
+                            isRamadanMode={isRamadanMode} selectedBatchId={selectedBatchId} onResetBatch={handleResetBatch} onChangeBatch={selectBatch}
+                            onRecalculateSerials={recalculateSerials} onRefreshStudents={refreshStudents}
+                        />
+                    ) : (
+                        <StudentDashboard 
+                            student={safeStudents.find(s => s.id === currentUser?.id)!}
+                            allStudents={safeStudents} attendanceRecords={safeAttendanceRecords}
+                            onRecordAttendance={recordAttendance} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
+                            onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal}
+                            activeLecture={activeLecture} lectures={safeLectures} courses={safeStudentCourses}
+                            onGenerateQrCode={generateQrCode} onDeleteLecture={deleteLecture}
+                            onRepeatPreviousAttendance={repeatPreviousAttendance} onClearLectureAttendance={clearLectureAttendance}
+                            absencePercentageEnabled={absencePercentageEnabled} isRamadanMode={isRamadanMode}
+                        />
+                    )}
+                </React.Suspense>
             </main>
         </div>
     );
