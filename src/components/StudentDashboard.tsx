@@ -212,10 +212,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         if (isBatchAdmin) {
             return sorted; 
         } else {
-            const todayStr = getLocalYYYYMMDD();
-            return sorted.filter(l => l.date === todayStr);
+            // 💡 تحسين الفلترة: قائد المجموعة يرى دائماً (المحاضرة النشطة المباشرة) + (محاضرات آخر 24 ساعة)
+            // هذا يمنع اختفاء الأزرار بسبب مشاكل فروقات التوقيت أو صيغة التاريخ!
+            return sorted.filter(l => 
+                l.qrCode === activeLecture?.qrCode || // 1. ضمان ظهور المحاضرة المباشرة دائماً
+                (Date.now() - new Date(l.createdAt).getTime()) < 24 * 60 * 60 * 1000 // 2. ضمان ظهور محاضرات اليوم
+            );
         }
-    }, [lectures, isBatchAdmin]);
+    }, [lectures, isBatchAdmin, activeLecture]);
 
     useEffect(() => {
         if (!selectedDateFilter && uniqueLectureDates.length > 0) {
