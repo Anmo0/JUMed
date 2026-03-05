@@ -44,7 +44,7 @@ interface StudentDashboardProps {
     activeLecture: Lecture | null;
     lectures: Lecture[];
     courses: Course[];
-    onGenerateQrCode: (lectureData: { date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string }, callbacks: { onSuccess: () => void, onError: (msg: string) => void }) => void;
+    onGenerateQrCode: (lectureData: { date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string, isManual?: boolean }, callbacks: { onSuccess: () => void, onError: (msg: string) => void }) => void;
     onDeleteLecture: (lectureId: string) => void;
     onClearLectureAttendance: (lectureId: string) => void;
     onRepeatPreviousAttendance: (targetLectureId: string) => Promise<{ success: boolean, message: string }>;
@@ -254,10 +254,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     setQrModalOpen(false);
                     setIsCreatingQr(false);
 
-                    // 💡 التعديلات الجديدة للانتقال التلقائي:
+                    // 💡 التعديلات الصحيحة الخاصة بالليدر:
                     setSelectedDateFilter(qrForm.date); 
-                    setSelectedLectureId(null); 
-                    setActiveTab('attendance'); 
+                    setManagementSelectedLectureId(null); // استخدام المتغير الخاص بتحضير الدفعة
+                    setActiveTab('management'); // الانتقال لتبويبة تحضير الدفعة الصحيحة
                 },
                 onError: (message: string) => {
                     setIsCreatingQr(false);
