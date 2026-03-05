@@ -117,7 +117,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const TabButton: React.FC<{ isActive: boolean; onClick: () => void; title: string; icon: React.ReactNode }> = ({ isActive, onClick, title, icon }) => (
         <button
             onClick={onClick}
-            className={`flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 transform ${
+            className={`flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 transform transform-gpu ${
                 isActive
                     ? (isRamadanMode ? 'bg-yellow-500 text-slate-900 shadow-lg shadow-yellow-500/30 scale-105' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 scale-105')
                     : 'text-gray-400 hover:bg-slate-800/80 hover:text-white'
@@ -129,12 +129,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     );
 
     const StatCard: React.FC<{ title: string, value: string | number, icon: React.ReactNode, colorClass: string }> = ({ title, value, icon, colorClass }) => (
-        <div className={`backdrop-blur-xl border p-5 rounded-2xl flex items-center justify-between group transition-all ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'}`}>
+        <div className={`backdrop-blur-xl border p-5 rounded-2xl flex items-center justify-between group transition-all transform-gpu ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'}`}>
             <div>
                 <p className={`text-sm font-medium mb-1 ${isRamadanMode ? 'text-gray-300' : 'text-gray-400'}`}>{title}</p>
                 <p className={`text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>{value}</p>
             </div>
-            <div className={`p-3 rounded-xl ${isRamadanMode ? 'bg-yellow-500/10 text-[#D4AF37]' : colorClass + ' bg-opacity-10'} group-hover:scale-110 transition-transform`}>
+            <div className={`p-3 rounded-xl ${isRamadanMode ? 'bg-yellow-500/10 text-[#D4AF37]' : colorClass + ' bg-opacity-10'} group-hover:scale-110 transition-transform transform-gpu`}>
                 {icon}
             </div>
         </div>
@@ -320,11 +320,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         };
     }, [students, lectures, attendanceRecords, courses]);
 
+    // 💡 جلب آخر مقرر تم اختياره، وحفظ أي تغيير جديد
     useEffect(() => {
         if (courses.length > 0 && !selectedCourseId) {
-            setSelectedCourseId(courses[0].id);
+            const savedCourseId = localStorage.getItem('lastSelectedCourseId');
+            const isValidSavedCourse = courses.some(c => c.id === savedCourseId);
+            
+            if (savedCourseId && isValidSavedCourse) {
+                setSelectedCourseId(savedCourseId);
+            } else {
+                setSelectedCourseId(courses[0].id);
+            }
         }
     }, [courses, selectedCourseId]);
+
+    useEffect(() => {
+        if (selectedCourseId) {
+            localStorage.setItem('lastSelectedCourseId', selectedCourseId);
+        }
+    }, [selectedCourseId]);
 
     const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newStart = e.target.value;
@@ -482,13 +496,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                         </div>
                                         <div className="flex gap-3">
                                             {group.male && (
-                                                <button onClick={() => { onChangeBatch(group.male!.id); setActiveTab('attendance'); }} className="flex-1 flex flex-col items-center justify-center bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 py-3 rounded-xl transition-all border border-blue-500/20 group/btn">
+                                                <button onClick={() => { onChangeBatch(group.male!.id); setActiveTab('attendance'); }} className="flex-1 flex flex-col items-center justify-center bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 py-3 rounded-xl transition-all transform-gpu border border-blue-500/20 group/btn">
                                                     <span className="font-black mb-1">الطلاب</span>
                                                     <span className="text-[10px] text-gray-400 bg-slate-900/50 px-2 py-0.5 rounded-full">{group.male.studentCount || 0} طالب</span>
                                                 </button>
                                             )}
                                             {group.female && (
-                                                <button onClick={() => { onChangeBatch(group.female!.id); setActiveTab('attendance'); }} className="flex-1 flex flex-col items-center justify-center bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 py-3 rounded-xl transition-all border border-pink-500/20 group/btn">
+                                                <button onClick={() => { onChangeBatch(group.female!.id); setActiveTab('attendance'); }} className="flex-1 flex flex-col items-center justify-center bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 py-3 rounded-xl transition-all transform-gpu border border-pink-500/20 group/btn">
                                                     <span className="font-black mb-1">الطالبات</span>
                                                     <span className="text-[10px] text-gray-400 bg-slate-900/50 px-2 py-0.5 rounded-full">{group.female.studentCount || 0} طالبة</span>
                                                 </button>
@@ -555,7 +569,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                             <h3 className="text-xl font-bold text-white mb-6">نظرة عامة على الدفعات</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {batches.map(batch => (
-                                    <div key={batch.id} onClick={() => onChangeBatch(batch.id)} className={`cursor-pointer bg-slate-900/50 border p-4 rounded-2xl flex flex-col gap-2 transition-all ${batch.id === selectedBatchId ? 'border-blue-500/50 shadow-lg shadow-blue-500/10' : 'border-slate-700 hover:border-slate-500'}`}>
+                                    <div key={batch.id} onClick={() => onChangeBatch(batch.id)} className={`cursor-pointer bg-slate-900/50 border p-4 rounded-2xl flex flex-col gap-2 transition-all transform-gpu ${batch.id === selectedBatchId ? 'border-blue-500/50 shadow-lg shadow-blue-500/10' : 'border-slate-700 hover:border-slate-500'}`}>
                                         <div className="flex justify-between items-center">
                                             <p className="font-bold text-white text-lg">{batch.batchName}</p>
                                             <span className={`text-[10px] px-2 py-1 rounded-full border ${batch.isArchived ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
@@ -597,7 +611,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <button 
                         onClick={handleSeedCourses}
                         disabled={isSeeding}
-                        className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'} disabled:opacity-50`}
+                        className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all transform-gpu shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'} disabled:opacity-50`}
                     >
                         {isSeeding ? 'جاري الإضافة...' : 'إضافة المقررات الافتراضية'}
                     </button>
@@ -606,7 +620,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                             setCourseFormState({ id: '', name: '', code: '', creditHours: 0, weeks: 0, absenceLimit: 25, absenceWeight: 2.5 });
                             setCourseModalOpen(true);
                         }}
-                        className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}
+                        className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all transform-gpu shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}
                     >
                         إضافة مقرر جديد
                     </button>
@@ -615,7 +629,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {courses.map(course => (
-                    <div key={course.id} className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl relative group hover:border-slate-600 transition-all">
+                    <div key={course.id} className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl relative group hover:border-slate-600 transition-all transform-gpu">
                         <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
                                 onClick={() => {
@@ -630,14 +644,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                     });
                                     setCourseModalOpen(true);
                                 }}
-                                className="p-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-xl transition-colors"
+                                className="p-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-xl transition-colors transform-gpu"
                                 title="تعديل المقرر"
                             >
                                 <EditIcon className="w-4 h-4" />
                             </button>
                             <button 
                                 onClick={() => handleDeleteCourse(course.id)}
-                                className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-colors"
+                                className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-colors transform-gpu"
                                 title="حذف المقرر"
                             >
                                 <TrashIcon className="w-4 h-4" />
@@ -1492,7 +1506,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                                 <UsersIcon className="w-5 h-5 text-purple-400" />
                                                                 <span className="font-bold text-purple-300 text-sm">أنت الآن تستعرض سجل حضور مجموعة محددة فقط.</span>
                                                             </div>
-                                                            <button onClick={() => setAttendanceGroupFilter('all')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all">
+                                                            <button onClick={() => setAttendanceGroupFilter('all')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all transform-gpu">
                                                                 عرض كل الطلاب
                                                             </button>
                                                         </div>
@@ -1506,7 +1520,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                                 <button
                                                                     key={dateStr}
                                                                     onClick={() => handleDateFilterChange(dateStr)}
-                                                                    className={`flex flex-col items-center justify-center min-w-[85px] p-4 rounded-2xl border transition-all duration-300 ${
+                                                                    className={`flex flex-col items-center justify-center min-w-[85px] p-4 rounded-2xl border transition-all duration-300 transform-gpu ${
                                                                         isSelected 
                                                                             ? (isRamadanMode ? 'bg-yellow-600 border-yellow-500 text-white shadow-xl shadow-yellow-600/20 scale-105' : 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-600/20 scale-105')
                                                                             : 'bg-slate-800/40 border-slate-800 text-gray-400 hover:bg-slate-700/60 hover:border-slate-700'
@@ -1547,7 +1561,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         <button 
                                                             onClick={() => setClearAttendanceModalOpen(true)}
                                                             disabled={!selectedLectureId}
-                                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all active:scale-90 border disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 border disabled:opacity-50 disabled:cursor-not-allowed ${
                                                                 isRamadanMode 
                                                                     ? 'bg-red-600/10 border-red-500/20 text-red-400 hover:bg-red-600 hover:text-white' 
                                                                     : 'bg-red-600/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white'
@@ -1564,7 +1578,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         </button>
                                                         <button 
                                                             onClick={() => setClearLecturesModalOpen(true)}
-                                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all active:scale-90 border ${
+                                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 border ${
                                                                 isRamadanMode 
                                                                     ? 'bg-red-600/10 border-red-500/20 text-red-400 hover:bg-red-600 hover:text-white' 
                                                                     : 'bg-red-600/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white'
@@ -1574,16 +1588,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                             <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                                                             <span className="text-xs sm:text-sm font-bold hidden sm:inline">مسح المحاضرات</span>
                                                         </button>
-                                                        <button onClick={() => setRepeatModalOpen(true)} disabled={!selectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl sm:rounded-2xl transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed" title="تكرار الحضور">
+                                                        <button onClick={() => setRepeatModalOpen(true)} disabled={!selectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed" title="تكرار الحضور">
                                                             <CopyIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                                                         </button>
-                                                        <button onClick={handleExportPdf} disabled={!selectedLectureId || isExportingPdf} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
+                                                        <button onClick={handleExportPdf} disabled={!selectedLectureId || isExportingPdf} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
                                                             {isExportingPdf ? 'جاري التصدير...' : 'تصدير PDF'}
                                                         </button>
                                                         <button 
                                                             onClick={() => setDeleteLectureModalOpen(true)} 
                                                             disabled={!selectedLectureId} 
-                                                            className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl sm:rounded-2xl transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                                             title="حذف المحاضرة نهائياً"
                                                         >
                                                             <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1593,7 +1607,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
                                                 <div className="block sm:hidden space-y-4">
                                                     {attendanceData.length > 0 ? attendanceData.map((item) => (
-                                                        <div key={item.id} className="bg-slate-800/30 border border-slate-700/50 p-4 rounded-2xl flex flex-col gap-3 transition-all">
+                                                        <div key={item.id} className="bg-slate-800/30 border border-slate-700/50 p-4 rounded-2xl flex flex-col gap-3 transition-all transform-gpu">
                                                             <div className="flex justify-between items-start">
                                                                 <div>
                                                                     <div className="flex items-center gap-2 mb-1">
@@ -1612,11 +1626,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                             <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
                                                                 <span className="text-xs text-gray-500">{item.isLeader ? '(قائد المجموعة)' : ''}</span>
                                                                 {item.status === 'غائب' ? (
-                                                                    <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 font-black text-sm flex items-center gap-1">
+                                                                    <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
                                                                         <CheckCircleIcon className="w-4 h-4"/> تحضير
                                                                     </button>
                                                                 ) : (
-                                                                    <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 font-black text-sm flex items-center gap-1">
+                                                                    <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
                                                                         <XCircleIcon className="w-4 h-4"/> إلغاء
                                                                     </button>
                                                                 )}
@@ -1640,7 +1654,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-800 bg-slate-900/20">
                                                             {attendanceData.length > 0 ? attendanceData.map((item) => (
-                                                                <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
+                                                                <tr key={item.id} className="hover:bg-slate-800/40 transition-colors transform-gpu">
                                                                     <td className="px-6 py-4 font-mono text-gray-500">{item.serialNumber}</td>
                                                                     <td className="px-6 py-4 font-bold text-white">
                                                                         {item.name}
@@ -1650,11 +1664,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                                     <td className="px-6 py-4">{getStatusChip(item.status, item.record)}</td>
                                                                     <td className="px-6 py-4">
                                                                         {item.status === 'غائب' ? (
-                                                                            <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 hover:underline font-bold text-xs flex items-center gap-1">
+                                                                            <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 hover:underline font-bold text-xs flex items-center gap-1 transition-all transform-gpu">
                                                                                 <CheckCircleIcon className="w-4 h-4"/> تحضير
                                                                             </button>
                                                                         ) : (
-                                                                            <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 hover:underline font-bold text-xs flex items-center gap-1">
+                                                                            <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 hover:underline font-bold text-xs flex items-center gap-1 transition-all transform-gpu">
                                                                                 <XCircleIcon className="w-4 h-4"/> إلغاء
                                                                             </button>
                                                                         )}
@@ -1736,7 +1750,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                                                         <button 
                                                             onClick={() => onToggleAbsencePercentage(!absencePercentageEnabled)} 
-                                                            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all border ${
+                                                            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all transform-gpu border ${
                                                                 absencePercentageEnabled 
                                                                     ? 'bg-blue-600/10 border-blue-500/30 text-blue-500 hover:bg-blue-600 hover:text-white' 
                                                                     : 'bg-slate-800 border-slate-700 text-gray-400 hover:bg-slate-700 hover:text-white'
@@ -1747,7 +1761,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         </button>
                                                         <button 
                                                             onClick={() => onToggleDeviceBinding(!deviceBindingEnabled)} 
-                                                            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all border ${
+                                                            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all transform-gpu border ${
                                                                 deviceBindingEnabled 
                                                                     ? 'bg-green-600/10 border-green-500/30 text-green-500 hover:bg-green-600 hover:text-white' 
                                                                     : 'bg-slate-800 border-slate-700 text-gray-400 hover:bg-slate-700 hover:text-white'
@@ -1758,7 +1772,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         </button>
                                                         <button 
                                                             onClick={() => onToggleLocationRestriction(!locationRestrictionEnabled)} 
-                                                            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all border ${
+                                                            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold transition-all transform-gpu border ${
                                                                 locationRestrictionEnabled 
                                                                     ? 'bg-red-600/10 border-red-500/30 text-red-500 hover:bg-red-600 hover:text-white' 
                                                                     : 'bg-slate-800 border-slate-700 text-gray-400 hover:bg-slate-700 hover:text-white'
@@ -1767,19 +1781,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         >
                                                             {locationRestrictionEnabled ? "التحقق من الموقع: مفعل" : "التحقق من الموقع: معطل"}
                                                         </button>
-                                                        <button onClick={() => setResetAllModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl sm:rounded-2xl transition-all" title="إلغاء ربط أجهزة الجميع">
+                                                        <button onClick={() => setResetAllModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl sm:rounded-2xl transition-all transform-gpu" title="إلغاء ربط أجهزة الجميع">
                                                             <UnplugIcon className="w-4 h-4 sm:w-5 sm:h-5"/>
                                                         </button>
                                                         <button 
                                                             onClick={onRecalculateSerials} 
-                                                            className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl sm:rounded-2xl transition-all" 
+                                                            className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-indigo-600/10 border border-indigo-500/20 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl sm:rounded-2xl transition-all transform-gpu" 
                                                             title="تحديث الأرقام التسلسلية لجميع الطلاب"
                                                         >
                                                             <ClipboardListIcon className="w-4 h-4 sm:w-5 sm:h-5"/>
                                                         </button>
-                                                        <button onClick={() => setDeleteStudentsModalOpen(true)} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white' : 'bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white'}`}>حذف الطلاب</button>
-                                                        <button onClick={() => setImportModalOpen(true)} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'bg-yellow-600/20 text-yellow-500 hover:bg-yellow-600 hover:text-white' : 'bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white'}`}>استيراد طلاب</button>
-                                                        <button onClick={() => handleOpenModal()} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إضافة طالب</button>
+                                                        <button onClick={() => setDeleteStudentsModalOpen(true)} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white' : 'bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white'}`}>حذف الطلاب</button>
+                                                        <button onClick={() => setImportModalOpen(true)} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'bg-yellow-600/20 text-yellow-500 hover:bg-yellow-600 hover:text-white' : 'bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white'}`}>استيراد طلاب</button>
+                                                        <button onClick={() => handleOpenModal()} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إضافة طالب</button>
                                                     </div>
                                                 </div>
 
@@ -1808,13 +1822,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         <span className="text-[10px] text-gray-400 py-1">المجموعة: {student.groupName || '-'}</span>
                                                     </div>
                                                     <div className="flex gap-1">
-                                                        <button onClick={() => handleOpenModal(student)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-xl transition-colors"><EditIcon className="w-5 h-5"/></button>
+                                                        <button onClick={() => handleOpenModal(student)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all transform-gpu"><EditIcon className="w-5 h-5"/></button>
                                                         <button 
                                                             onClick={() => handleOpenResetModal(student)} 
                                                             disabled={!student.deviceInfo}
-                                                            className="p-2 text-orange-400 hover:bg-orange-500/10 rounded-xl transition-colors disabled:opacity-20"
+                                                            className="p-2 text-orange-400 hover:bg-orange-500/10 rounded-xl transition-all transform-gpu disabled:opacity-20"
                                                         ><UnplugIcon className="w-5 h-5"/></button>
-                                                        <button onClick={() => handleOpenDeleteStudentModal(student)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"><TrashIcon className="w-5 h-5"/></button>
+                                                        <button onClick={() => handleOpenDeleteStudentModal(student)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-all transform-gpu"><TrashIcon className="w-5 h-5"/></button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1853,13 +1867,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                             }
                                                         </td>
                                                         <td className="px-6 py-4 flex justify-center gap-3">
-                                                            <button onClick={() => handleOpenModal(student)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg"><EditIcon className="w-5 h-5"/></button>
+                                                            <button onClick={() => handleOpenModal(student)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all transform-gpu"><EditIcon className="w-5 h-5"/></button>
                                                             <button 
                                                                 onClick={() => handleOpenResetModal(student)} 
                                                                 disabled={!student.deviceInfo}
-                                                                className="p-2 text-orange-400 hover:bg-orange-500/10 rounded-lg disabled:opacity-20"
+                                                                className="p-2 text-orange-400 hover:bg-orange-500/10 rounded-lg transition-all transform-gpu disabled:opacity-20"
                                                             ><UnplugIcon className="w-5 h-5"/></button>
-                                                            <button onClick={() => handleOpenDeleteStudentModal(student)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><TrashIcon className="w-5 h-5"/></button>
+                                                            <button onClick={() => handleOpenDeleteStudentModal(student)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-all transform-gpu"><TrashIcon className="w-5 h-5"/></button>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -1889,8 +1903,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                 <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
                                             <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>إدارة المجموعات</h2>
                                             <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-                                                <button onClick={() => setDeleteAllGroupsModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-500/20 text-xs sm:text-sm`}>حذف الجميع</button>
-                                                <button onClick={() => setGroupModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>جديد</button>
+                                                <button onClick={() => setDeleteAllGroupsModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-500/20 text-xs sm:text-sm`}>حذف الجميع</button>
+                                                <button onClick={() => setGroupModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>جديد</button>
                                             </div>
                                         </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1898,11 +1912,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                             const members = students.filter(s => s.groupId === group.id);
                                             const leader = members.find(s => s.isLeader);
                                             return (
-                                                <div key={group.id} className={`backdrop-blur-xl border p-6 rounded-[2rem] transition-all duration-300 group ${isRamadanMode ? 'ramadan-card hover:border-yellow-500/40' : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600'}`}>
+                                                <div key={group.id} className={`backdrop-blur-xl border p-6 rounded-[2rem] transition-all duration-300 transform-gpu group ${isRamadanMode ? 'ramadan-card hover:border-yellow-500/40' : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600'}`}>
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div className="flex items-center gap-3">
                                                             <h3 className={`text-xl font-black mb-1 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>{group.name}</h3>
-                                                            <button onClick={() => handleOpenEditGroupModal(group)} className={`flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg transition-all ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20' : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'}`}>
+                                                            <button onClick={() => handleOpenEditGroupModal(group)} className={`flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20' : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'}`}>
                                                                 <EditIcon className="w-3 h-3" />
                                                                 <span>تعديل</span>
                                                             </button>
@@ -1946,15 +1960,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                         <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>إدارة السنوات الدراسية (الدفعات)</h2>
                                         <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
                                             {showUndoPromotion && (
-                                                <button onClick={handleUndoPromotion} className="flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white animate-pulse">تراجع عن الترقية</button>
+                                                <button onClick={handleUndoPromotion} className="flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white animate-pulse">تراجع عن الترقية</button>
                                             )}
-                                            <button onClick={() => setPromoteModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>ترقية الدفعات</button>
-                                            <button onClick={() => setAddBatchModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>إضافة سنة دراسية جديدة</button>
+                                            <button onClick={() => setPromoteModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>ترقية الدفعات</button>
+                                            <button onClick={() => setAddBatchModalOpen(true)} className={`flex-1 sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>إضافة سنة دراسية جديدة</button>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {groupedBatches.map((group) => (
-                                            <div key={group.name} className={`backdrop-blur-xl border p-6 rounded-[2rem] transition-all duration-300 ${isRamadanMode ? 'ramadan-card hover:border-yellow-500/40' : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600'} ${group.isArchived ? 'opacity-60 grayscale' : ''}`}>
+                                            <div key={group.name} className={`backdrop-blur-xl border p-6 rounded-[2rem] transition-all duration-300 transform-gpu ${isRamadanMode ? 'ramadan-card hover:border-yellow-500/40' : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600'} ${group.isArchived ? 'opacity-60 grayscale' : ''}`}>
                                                 <div className="flex justify-between items-start mb-6">
                                                     <div>
                                                         <h3 className={`text-2xl font-black mb-1 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>
@@ -1964,10 +1978,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         {group.isArchived && <span className="mr-2 text-xs bg-gray-500/20 text-gray-400 px-2 py-1 rounded-full border border-gray-500/20">مؤرشفة</span>}
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <button onClick={() => { setGroupActionTarget(group); setArchiveBatchModalOpen(true); }} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${group.isArchived ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'}`}>
+                                                        <button onClick={() => { setGroupActionTarget(group); setArchiveBatchModalOpen(true); }} className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-all transform-gpu ${group.isArchived ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'}`}>
                                                             {group.isArchived ? 'استعادة' : 'أرشفة'}
                                                         </button>
-                                                        <button onClick={() => { setGroupActionTarget(group); setDeleteBatchModalOpen(true); }} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-red-500/10 text-red-500 hover:bg-red-500/20">
+                                                        <button onClick={() => { setGroupActionTarget(group); setDeleteBatchModalOpen(true); }} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-all transform-gpu bg-red-500/10 text-red-500 hover:bg-red-500/20">
                                                             حذف
                                                         </button>
                                                     </div>
@@ -1977,7 +1991,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                     {group.male && (
                                                         <button 
                                                             onClick={() => { onChangeBatch(group.male!.id); setActiveTab('attendance'); }}
-                                                            className="flex flex-col items-center justify-center p-4 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 rounded-2xl transition-all group/btn"
+                                                            className="flex flex-col items-center justify-center p-4 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 rounded-2xl transition-all transform-gpu group/btn"
                                                         >
                                                             <span className="text-blue-400 font-black text-lg mb-1">شعبة الطلاب</span>
                                                             <span className="text-gray-400 text-xs font-bold bg-slate-900/50 px-3 py-1 rounded-full">{group.male.studentCount || 0} طالب</span>
@@ -1986,7 +2000,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                     {group.female && (
                                                         <button 
                                                             onClick={() => { onChangeBatch(group.female!.id); setActiveTab('attendance'); }}
-                                                            className="flex flex-col items-center justify-center p-4 bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 rounded-2xl transition-all group/btn"
+                                                            className="flex flex-col items-center justify-center p-4 bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 rounded-2xl transition-all transform-gpu group/btn"
                                                         >
                                                             <span className="text-pink-400 font-black text-lg mb-1">شعبة الطالبات</span>
                                                             <span className="text-gray-400 text-xs font-bold bg-slate-900/50 px-3 py-1 rounded-full">{group.female.studentCount || 0} طالبة</span>
@@ -2022,8 +2036,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={() => setPromoteModalOpen(false)} disabled={isPromoting} className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors disabled:opacity-50">إلغاء</button>
-                        <button onClick={handlePromoteBatches} disabled={isPromoting} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-purple-600/20 disabled:opacity-50">
+                        <button onClick={() => setPromoteModalOpen(false)} disabled={isPromoting} className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all transform-gpu disabled:opacity-50">إلغاء</button>
+                        <button onClick={handlePromoteBatches} disabled={isPromoting} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all transform-gpu shadow-lg shadow-purple-600/20 disabled:opacity-50">
                             {isPromoting ? 'جاري الترقية...' : 'تأكيد الترقية'}
                         </button>
                     </div>
@@ -2054,8 +2068,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     </div>
 
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setStudentModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">{currentStudent ? 'حفظ' : 'إضافة'}</button>
+                        <button type="button" onClick={() => setStudentModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all transform-gpu shadow-lg shadow-blue-600/20">{currentStudent ? 'حفظ' : 'إضافة'}</button>
                     </div>
                 </form>
             </Modal>
@@ -2133,7 +2147,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                             type="submit" 
                             name="qrBtn"
                             disabled={isCreatingQr || !selectedCourseId} 
-                            className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-green-600/20 disabled:opacity-50"
+                            className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-green-600/20 disabled:opacity-50"
                         >
                             {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور بالباركود'}
                         </button>
@@ -2141,7 +2155,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                             type="submit" 
                             name="manualBtn"
                             disabled={isCreatingQr || !selectedCourseId} 
-                            className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                            className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-purple-600/20 disabled:opacity-50"
                         >
                             {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور'}
                         </button>
@@ -2154,8 +2168,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <AlertTriangleIcon className="mx-auto h-16 w-16 text-yellow-500 mb-4" />
                     <p className="text-gray-300 font-bold">يوجد باركود فعال حالياً. إنشاء باركود جديد سيعطل القديم فوراً.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setConfirmModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">تراجع</button>
-                        <button onClick={handleConfirmGenerateNew} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">استمرار</button>
+                        <button onClick={() => setConfirmModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">تراجع</button>
+                        <button onClick={handleConfirmGenerateNew} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">استمرار</button>
                     </div>
                 </div>
             </Modal>
@@ -2165,8 +2179,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <UnplugIcon className="mx-auto h-16 w-16 text-red-500 mb-4" />
                     <p className="text-gray-300 font-bold">هل أنت متأكد من إلغاء ربط أجهزة جميع الطلاب؟</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setResetAllModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={handleConfirmResetAll} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">نعم، تنفيذ</button>
+                        <button onClick={() => setResetAllModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmResetAll} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">نعم، تنفيذ</button>
                     </div>
                 </div>
             </Modal>
@@ -2176,8 +2190,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <TrashIcon className="mx-auto h-16 w-16 text-red-500 mb-4" />
                     <p className="text-gray-300 font-bold">سيتم حذف المحاضرة وجميع سجلات حضور الطلاب المرتبطة بها نهائياً.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setDeleteLectureModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">تراجع</button>
-                        <button onClick={handleConfirmDeleteLecture} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">حذف نهائي</button>
+                        <button onClick={() => setDeleteLectureModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">تراجع</button>
+                        <button onClick={handleConfirmDeleteLecture} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">حذف نهائي</button>
                     </div>
                 </div>
             </Modal>
@@ -2188,8 +2202,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <p className="text-gray-300 font-bold">هل أنت متأكد من حذف الطالب "{studentToDelete?.name}"؟</p>
                     <p className="text-red-400 text-xs mt-2">سيتم حذف جميع سجلات حضوره أيضاً.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setDeleteStudentModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={handleConfirmDeleteStudent} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">تأكيد الحذف</button>
+                        <button onClick={() => setDeleteStudentModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmDeleteStudent} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">تأكيد الحذف</button>
                     </div>
                 </div>
             </Modal>
@@ -2208,8 +2222,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         />
                     </div>
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setGroupModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إضافة</button>
+                        <button type="button" onClick={() => setGroupModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all transform-gpu shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إضافة</button>
                     </div>
                 </form>
             </Modal>
@@ -2258,7 +2272,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                 else next.add(student.id);
                                                 setSelectedGroupStudentIds(next);
                                             }}
-                                            className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                                            className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all transform-gpu border ${
                                                 isSelected 
                                                     ? 'bg-blue-600/20 border-blue-500/50 text-white' 
                                                     : 'bg-slate-800/40 border-slate-700/50 text-gray-400 hover:border-slate-600'
@@ -2293,8 +2307,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     </div>
 
                     <div className="pt-6 flex gap-3">
-                        <button type="button" onClick={() => setEditGroupModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">حفظ التعديلات</button>
+                        <button type="button" onClick={() => setEditGroupModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all transform-gpu shadow-lg shadow-blue-600/20">حفظ التعديلات</button>
                     </div>
                 </form>
             </Modal>
@@ -2305,13 +2319,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <p className="text-gray-300 font-bold">هل أنت متأكد من مسح جميع سجلات حضور الطلاب <span className="text-red-400">لهذه المحاضرة فقط</span>؟</p>
                     <p className="text-gray-500 text-xs mt-2">المحاضرة ستبقى موجودة، ولكن سيتم تصفير التحضير.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setClearAttendanceModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
+                        <button onClick={() => setClearAttendanceModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
                         <button 
                             onClick={() => { 
                                 if(selectedLectureId) onClearLectureAttendance(selectedLectureId); 
                                 setClearAttendanceModalOpen(false); 
                             }} 
-                            className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold"
+                            className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu"
                         >
                             تأكيد المسح
                         </button>
@@ -2325,8 +2339,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <p className="text-gray-300 font-bold">هل أنت متأكد من مسح جميع المحاضرات وسجلات الحضور نهائياً؟</p>
                     <p className="text-red-400 text-xs mt-2">سيتم تصفير النظام بالكامل (باستثناء الطلاب والمجموعات).</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setClearLecturesModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={handleConfirmClearLectures} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">تأكيد المسح الشامل</button>
+                        <button onClick={() => setClearLecturesModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmClearLectures} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">تأكيد المسح الشامل</button>
                     </div>
                 </div>
             </Modal>
@@ -2341,8 +2355,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         </div>
                     )}
                     <div className="flex gap-3">
-                        <button onClick={() => setRepeatModalOpen(false)} disabled={isRepeating} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold disabled:opacity-50">إلغاء</button>
-                        <button onClick={handleConfirmRepeat} disabled={isRepeating} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white font-bold transition-all disabled:opacity-50">
+                        <button onClick={() => setRepeatModalOpen(false)} disabled={isRepeating} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu disabled:opacity-50">إلغاء</button>
+                        <button onClick={handleConfirmRepeat} disabled={isRepeating} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white font-bold transition-all transform-gpu disabled:opacity-50">
                             {isRepeating ? 'جاري التكرار...' : 'تأكيد التكرار'}
                         </button>
                     </div>
@@ -2355,8 +2369,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <p className="text-gray-300 font-bold">هل أنت متأكد من حذف جميع المجموعات نهائياً؟</p>
                     <p className="text-red-400 text-xs mt-2">سيتم إزالة جميع الطلاب من مجموعاتهم.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setDeleteAllGroupsModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={handleConfirmDeleteAllGroups} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">تأكيد الحذف</button>
+                        <button onClick={() => setDeleteAllGroupsModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmDeleteAllGroups} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">تأكيد الحذف</button>
                     </div>
                 </div>
             </Modal>
@@ -2397,8 +2411,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     </div>
 
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setAddBatchModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إضافة الدفعة</button>
+                        <button type="button" onClick={() => setAddBatchModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all transform-gpu shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إضافة الدفعة</button>
                     </div>
                 </form>
             </Modal>
@@ -2417,8 +2431,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                             : "لن تظهر هذه السنة الدراسية في قائمة الاختيار بعد الآن، ولكن سيتم الاحتفاظ ببياناتها."}
                     </p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setArchiveBatchModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={handleConfirmArchiveBatch} className={`flex-1 py-3 rounded-2xl text-white font-bold ${groupActionTarget?.isArchived ? 'bg-green-600' : 'bg-yellow-600'}`}>
+                        <button onClick={() => setArchiveBatchModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmArchiveBatch} className={`flex-1 py-3 rounded-2xl text-white font-bold transition-all transform-gpu ${groupActionTarget?.isArchived ? 'bg-green-600' : 'bg-yellow-600'}`}>
                             {groupActionTarget?.isArchived ? 'تأكيد الاستعادة' : 'تأكيد الأرشفة'}
                         </button>
                     </div>
@@ -2438,8 +2452,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     </div>
 
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setDeleteBatchModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={handleConfirmDeleteBatch} className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold transition-all">
+                        <button onClick={() => setDeleteBatchModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmDeleteBatch} className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold transition-all transform-gpu">
                             تأكيد الحذف النهائي
                         </button>
                     </div>
@@ -2469,8 +2483,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                 />
                             </div>
                             <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => { setImportModalOpen(false); setImportFile(null); }} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                                <button type="submit" disabled={!importFile || isImporting} className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all shadow-lg disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
+                                <button type="button" onClick={() => { setImportModalOpen(false); setImportFile(null); }} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                                <button type="submit" disabled={!importFile || isImporting} className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all transform-gpu shadow-lg disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
                                     {isImporting ? 'جاري الاستيراد...' : 'بدء الاستيراد'}
                                 </button>
                             </div>
@@ -2498,7 +2512,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                             )}
                             
                             <div className="pt-4">
-                                <button type="button" onClick={() => { setImportModalOpen(false); setImportFile(null); setImportResult(null); }} className="w-full px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إغلاق</button>
+                                <button type="button" onClick={() => { setImportModalOpen(false); setImportFile(null); setImportResult(null); }} className="w-full px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إغلاق</button>
                             </div>
                         </div>
                     )}
@@ -2518,8 +2532,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     </div>
 
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setDeleteStudentsModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={handleConfirmDeleteStudents} disabled={isDeletingStudents} className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold transition-all disabled:opacity-50">
+                        <button onClick={() => setDeleteStudentsModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmDeleteStudents} disabled={isDeletingStudents} className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold transition-all transform-gpu disabled:opacity-50">
                             {isDeletingStudents ? 'جاري الحذف...' : 'تأكيد الحذف'}
                         </button>
                     </div>
@@ -2609,8 +2623,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         </div>
                     </div>
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setCourseModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
+                        <button type="button" onClick={() => setCourseModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all transform-gpu shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
                             {courseFormState.id ? 'حفظ التعديلات' : 'إضافة'}
                         </button>
                     </div>

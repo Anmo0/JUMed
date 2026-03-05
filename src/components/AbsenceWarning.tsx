@@ -53,7 +53,7 @@ const AbsenceWarning: React.FC<Props> = ({ courses, lectures, attendanceRecords,
             {warnings.map((warn, idx) => {
                 if (warn.status === 'banned') {
                     return (
-                        <div key={idx} className={`flex items-center p-4 sm:p-5 border-2 rounded-[1.5rem] shadow-xl transition-all ${isRamadanMode ? 'bg-red-950/40 border-red-500/50' : 'bg-red-900/20 border-red-500/30'}`}>
+                        <div key={idx} className={`flex items-center p-4 sm:p-5 border-2 rounded-[1.5rem] shadow-xl transition-all transform-gpu ${isRamadanMode ? 'bg-red-950/40 border-red-500/50' : 'bg-red-900/20 border-red-500/30'}`}>
                             <div className="p-3 rounded-full me-4 shadow-lg bg-red-500/20 text-red-500 animate-pulse">
                                 <AlertTriangleIcon className="w-6 h-6 sm:w-8 sm:h-8" />
                             </div>
@@ -67,7 +67,7 @@ const AbsenceWarning: React.FC<Props> = ({ courses, lectures, attendanceRecords,
                     );
                 } else if (warn.status === 'warning') {
                     return (
-                        <div key={idx} className={`flex items-center p-4 sm:p-5 border-2 rounded-[1.5rem] shadow-xl transition-all ${isRamadanMode ? 'bg-orange-950/40 border-orange-500/50' : 'bg-orange-900/20 border-orange-500/30'}`}>
+                        <div key={idx} className={`flex items-center p-4 sm:p-5 border-2 rounded-[1.5rem] shadow-xl transition-all transform-gpu ${isRamadanMode ? 'bg-orange-950/40 border-orange-500/50' : 'bg-orange-900/20 border-orange-500/30'}`}>
                             <div className="p-3 rounded-full me-4 shadow-lg bg-orange-500/20 text-orange-500 animate-pulse">
                                 <AlertTriangleIcon className="w-6 h-6 sm:w-8 sm:h-8" />
                             </div>
@@ -81,7 +81,7 @@ const AbsenceWarning: React.FC<Props> = ({ courses, lectures, attendanceRecords,
                     );
                 } else {
                     return (
-                        <div key={idx} className={`flex items-center p-4 sm:p-5 border-2 rounded-[1.5rem] shadow-sm transition-all ${isRamadanMode ? 'bg-blue-950/30 border-blue-500/30' : 'bg-blue-900/10 border-blue-500/20'}`}>
+                        <div key={idx} className={`flex items-center p-4 sm:p-5 border-2 rounded-[1.5rem] shadow-sm transition-all transform-gpu ${isRamadanMode ? 'bg-blue-950/30 border-blue-500/30' : 'bg-blue-900/10 border-blue-500/20'}`}>
                             <div className="p-3 rounded-full me-4 bg-blue-500/20 text-blue-400">
                                 <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>

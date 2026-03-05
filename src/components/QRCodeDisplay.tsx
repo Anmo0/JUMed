@@ -37,7 +37,7 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ activeLecture, onGenerate
     };
 
     return (
-        <div className={`backdrop-blur-2xl border p-6 sm:p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center text-center transition-all sticky top-24 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
+        <div className={`backdrop-blur-2xl border p-6 sm:p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center text-center transition-all transform-gpu sticky top-24 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
             <h2 className={`text-2xl font-black mb-6 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>{title}</h2>
             
             {activeLecture ? (
@@ -53,7 +53,7 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ activeLecture, onGenerate
                             </p>
                         </div>
                     ) : (
-                        <div className={`p-4 rounded-[2rem] inline-block mb-6 shadow-xl transition-all ${isValid ? (isRamadanMode ? 'bg-yellow-500/10 shadow-yellow-500/20' : 'bg-white shadow-blue-500/20') : 'bg-slate-800 opacity-50 grayscale'}`}>
+                        <div className={`p-4 rounded-[2rem] inline-block mb-6 shadow-xl transition-all transform-gpu ${isValid ? (isRamadanMode ? 'bg-yellow-500/10 shadow-yellow-500/20' : 'bg-white shadow-blue-500/20') : 'bg-slate-800 opacity-50 grayscale'}`}>
                             <img 
                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${activeLecture.qrCode}`} 
                                 alt="QR Code" 
@@ -85,7 +85,7 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ activeLecture, onGenerate
             {onGenerateNew && (
                 <button 
                     onClick={onGenerateNew}
-                    className={`w-full py-4 text-white font-black rounded-2xl transition-all shadow-lg active:scale-95 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/25'}`}
+                    className={`w-full py-4 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg active:scale-95 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/25'}`}
                 >
                     + إنشاء محاضرة جديدة
                 </button>

@@ -29,19 +29,19 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onDismissError, isRamadan
                 <h1 className="text-3xl font-bold text-center text-white mb-2 animate-slide-in-up" style={{ animationDelay: '100ms' }}>تسجيل الدخول</h1>
                 <p className="text-center text-gray-300 mb-8 animate-slide-in-up" style={{ animationDelay: '200ms' }}>لنظام الحضور الذكي</p>
 
-                <div className={`backdrop-blur-2xl border rounded-2xl shadow-lg p-6 sm:p-8 animate-slide-in-up transition-all duration-500 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/85 border-slate-700/60'}`} style={{ animationDelay: '300ms' }}>
+                <div className={`backdrop-blur-2xl border rounded-2xl shadow-lg p-6 sm:p-8 animate-slide-in-up transition-all duration-500 transform-gpu ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/85 border-slate-700/60'}`} style={{ animationDelay: '300ms' }}>
                     <div className="flex bg-slate-800/50 rounded-lg p-1 mb-6 border border-slate-700/50">
                         <button
                             type="button"
                             onClick={() => { setUserType('student'); setUniversityId(''); setSerialNumber(''); }}
-                            className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${userType === 'student' ? (isRamadanMode ? 'bg-yellow-500 text-slate-900 shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-gray-400 hover:text-white'}`}
+                            className={`flex-1 py-2 text-sm font-bold rounded-md transition-all transform-gpu ${userType === 'student' ? (isRamadanMode ? 'bg-yellow-500 text-slate-900 shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-gray-400 hover:text-white'}`}
                         >
                             طالب
                         </button>
                         <button
                             type="button"
                             onClick={() => { setUserType('admin'); setUniversityId(''); setSerialNumber(''); }}
-                            className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${userType === 'admin' ? (isRamadanMode ? 'bg-yellow-500 text-slate-900 shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-gray-400 hover:text-white'}`}
+                            className={`flex-1 py-2 text-sm font-bold rounded-md transition-all transform-gpu ${userType === 'admin' ? (isRamadanMode ? 'bg-yellow-500 text-slate-900 shadow-md' : 'bg-blue-600 text-white shadow-md') : 'text-gray-400 hover:text-white'}`}
                         >
                             مشرف
                         </button>
@@ -58,7 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onDismissError, isRamadan
                                 value={universityId}
                                 onChange={(e) => setUniversityId(e.target.value)}
                                 required
-                                className={`w-full px-4 py-2.5 bg-slate-800/50 border rounded-lg shadow-sm focus:outline-none transition-all duration-200 text-white placeholder-gray-400 ${isRamadanMode ? 'border-yellow-500/30 focus:ring-yellow-500 focus:border-yellow-500' : 'border-slate-700 focus:ring-blue-500 focus:border-blue-500'}`}
+                                className={`w-full px-4 py-2.5 bg-slate-800/50 border rounded-lg shadow-sm focus:outline-none transition-all duration-200 transform-gpu text-white placeholder-gray-400 ${isRamadanMode ? 'border-yellow-500/30 focus:ring-yellow-500 focus:border-yellow-500' : 'border-slate-700 focus:ring-blue-500 focus:border-blue-500'}`}
                                 placeholder={userType === 'admin' ? 'admin@example.com' : 'مثال: 44123456'}
                             />
                         </div>
@@ -72,7 +72,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onDismissError, isRamadan
                                 value={serialNumber}
                                 onChange={(e) => setSerialNumber(e.target.value)}
                                 required
-                                className={`w-full px-4 py-2.5 bg-slate-800/50 border rounded-lg shadow-sm focus:outline-none transition-all duration-200 text-white placeholder-gray-400 ${isRamadanMode ? 'border-yellow-500/30 focus:ring-yellow-500 focus:border-yellow-500' : 'border-slate-700 focus:ring-blue-500 focus:border-blue-500'}`}
+                                className={`w-full px-4 py-2.5 bg-slate-800/50 border rounded-lg shadow-sm focus:outline-none transition-all duration-200 transform-gpu text-white placeholder-gray-400 ${isRamadanMode ? 'border-yellow-500/30 focus:ring-yellow-500 focus:border-yellow-500' : 'border-slate-700 focus:ring-blue-500 focus:border-blue-500'}`}
                                 placeholder="••••••••"
                             />
                         </div>
@@ -96,7 +96,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onDismissError, isRamadan
 
                         <button
                             type="submit"
-                            className={`w-full py-3 px-4 font-bold rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all transform hover:-translate-y-1 ${isRamadanMode ? 'ramadan-btn-gold focus:ring-yellow-500' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 focus:ring-indigo-500'}`}
+                            className={`w-full py-3 px-4 font-bold rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all transform transform-gpu hover:-translate-y-1 ${isRamadanMode ? 'ramadan-btn-gold focus:ring-yellow-500' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 focus:ring-indigo-500'}`}
                         >
                             دخول
                         </button>

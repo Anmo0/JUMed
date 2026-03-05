@@ -63,7 +63,7 @@ const TabButton: React.FC<{
 }> = ({ isActive, onClick, title, icon, isRamadanMode }) => (
     <button
         onClick={onClick}
-        className={`flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-300 transform flex-1 sm:flex-none ${
+        className={`flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all duration-300 transform transform-gpu flex-1 sm:flex-none ${
             isActive
                 ? (isRamadanMode ? 'bg-yellow-500 text-slate-900 shadow-lg shadow-yellow-500/30 scale-105' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 scale-105')
                 : 'text-gray-400 hover:bg-slate-800/80 hover:text-white'
@@ -226,11 +226,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         handleOpenQrModal();
     };
 
+    // 💡 جلب آخر مقرر تم اختياره، وحفظ أي تغيير جديد
     useEffect(() => {
         if (courses.length > 0 && !selectedCourseId) {
-            setSelectedCourseId(courses[0].id);
+            const savedCourseId = localStorage.getItem('lastSelectedCourseId');
+            const isValidSavedCourse = courses.some(c => c.id === savedCourseId);
+            
+            if (savedCourseId && isValidSavedCourse) {
+                setSelectedCourseId(savedCourseId);
+            } else {
+                setSelectedCourseId(courses[0].id);
+            }
         }
     }, [courses, selectedCourseId]);
+
+    useEffect(() => {
+        if (selectedCourseId) {
+            localStorage.setItem('lastSelectedCourseId', selectedCourseId);
+        }
+    }, [selectedCourseId]);
 
    const handleQrFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -677,7 +691,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     </p>
                     <button 
                         onClick={() => window.location.reload()}
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/20"
+                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all transform-gpu shadow-lg shadow-blue-600/20"
                     >
                         إعادة تحميل الصفحة
                     </button>
@@ -796,7 +810,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <button
                                             onClick={handleInitiateScan}
                                             disabled={(timeLeft !== null && timeLeft <= 0) || isLocating}
-                                            className={`group relative flex items-center justify-center gap-3 w-full max-w-sm px-6 sm:px-8 py-4 sm:py-5 text-white font-black rounded-2xl transition-all transform hover:-translate-y-1 active:scale-95 disabled:bg-slate-800 disabled:shadow-none animate-pulse-glow ${isRamadanMode ? 'bg-yellow-600 shadow-[0_0_30px_rgba(202,138,4,0.3)] hover:shadow-[0_0_40px_rgba(202,138,4,0.5)]' : 'bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_40px_rgba(37,99,235,0.5)]'}`}
+                                            className={`group relative flex items-center justify-center gap-3 w-full max-w-sm px-6 sm:px-8 py-4 sm:py-5 text-white font-black rounded-2xl transition-all transform transform-gpu hover:-translate-y-1 active:scale-95 disabled:bg-slate-800 disabled:shadow-none animate-pulse-glow ${isRamadanMode ? 'bg-yellow-600 shadow-[0_0_30px_rgba(202,138,4,0.3)] hover:shadow-[0_0_40px_rgba(202,138,4,0.5)]' : 'bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_40px_rgba(37,99,235,0.5)]'}`}
                                         >
                                             {buttonContent}
                                         </button>
@@ -918,7 +932,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         {student.isBatchLeader ? 'بصفتك رئيس الدفعة، يمكنك إنشاء مجموعة جديدة.' : 'يرجى التواصل مع رئيس الدفعة أو مشرف النظام لإضافتك إلى مجموعة.'}
                                     </p>
                                     {student.isBatchLeader && (
-                                        <button onClick={() => setCreateGroupModalOpen(true)} className={`font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all shadow-lg text-sm sm:text-base ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>إنشاء مجموعة جديدة</button>
+                                        <button onClick={() => setCreateGroupModalOpen(true)} className={`font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all transform-gpu shadow-lg text-sm sm:text-base ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>إنشاء مجموعة جديدة</button>
                                     )}
                                 </div>
                             ) : (
@@ -928,10 +942,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>إدارة المجموعة</h2>
                                             {(student.isLeader || student.isBatchLeader) && (
                                                 <div className="flex flex-wrap items-center gap-2 w-full mt-3 sm:mt-0">
-                                                    <button onClick={() => { setEditGroupName(student.groupName || ''); setEditGroupNameModalOpen(true); }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
+                                                    <button onClick={() => { setEditGroupName(student.groupName || ''); setEditGroupNameModalOpen(true); }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
                                                         تعديل الاسم
                                                     </button>
-                                                    <button onClick={() => setAddMemberModalOpen(true)} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'}`}>
+                                                    <button onClick={() => setAddMemberModalOpen(true)} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'}`}>
                                                         إضافة أعضاء
                                                     </button>
                                                     <button onClick={() => {
@@ -939,14 +953,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                         setTimeout(() => handleExportPdf(), 100);
                                                     }} 
                                                     disabled={!selectedLectureId || isExportingPdf}
-                                                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 ${isRamadanMode ? 'bg-yellow-600 text-slate-900' : 'bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white'}`}>
+                                                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-yellow-600 text-slate-900' : 'bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white'}`}>
                                                         {isExportingPdf ? 'جاري...' : 'تقرير PDF'}
                                                     </button>
                                                     <button onClick={() => {
                                                         if (confirm('هل أنت متأكد من مغادرة المجموعة؟')) {
                                                             onUpdateStudent(student.id, { groupId: undefined, groupName: undefined, isLeader: false });
                                                         }
-                                                    }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all ${isRamadanMode ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
+                                                    }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
                                                         مغادرة
                                                     </button>
                                                 </div>
@@ -1004,7 +1018,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                     if (newTag !== null) {
                                                                         onUpdateStudent(member.id, { tag: newTag });
                                                                     }
-                                                                }} className="text-purple-500 hover:text-purple-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-purple-500/5 px-3 py-1.5 rounded-xl transition-all active:scale-90">
+                                                                }} className="text-purple-500 hover:text-purple-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-purple-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                     <EditIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">تعديل العلامة</span>
                                                                 </button>
                                                             )}
@@ -1014,18 +1028,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                     if (confirm(`هل أنت متأكد من ${member.isLeader ? 'إلغاء تعيين' : 'تعيين'} ${member.name} كقائد للمجموعة؟`)) {
                                                                         onUpdateStudent(member.id, { isLeader: !member.isLeader });
                                                                     }
-                                                                }} className={`${member.isLeader ? 'text-red-500 hover:text-red-400 bg-red-500/5' : 'text-blue-500 hover:text-blue-400 bg-blue-500/5'} font-black text-[10px] flex items-center gap-1 uppercase tracking-wider px-3 py-1.5 rounded-xl transition-all active:scale-90`}>
+                                                                }} className={`${member.isLeader ? 'text-red-500 hover:text-red-400 bg-red-500/5' : 'text-blue-500 hover:text-blue-400 bg-blue-500/5'} font-black text-[10px] flex items-center gap-1 uppercase tracking-wider px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90`}>
                                                                     <UsersIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">{member.isLeader ? 'إلغاء القيادة' : 'تعيين كقائد'}</span>
                                                                 </button>
                                                             )}
                                                             
                                                             {selectedLectureId && (student.isLeader || student.isBatchLeader) && (
                                                                 isPresent ? (
-                                                                    <button onClick={() => onRemoveAttendance(member.id, actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all active:scale-90">
+                                                                    <button onClick={() => onRemoveAttendance(member.id, actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                         <XCircleIcon className="w-3.5 h-3.5"/> غياب
                                                                     </button>
                                                                 ) : (
-                                                                    <button onClick={() => onManualAttendance(member.id, actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all active:scale-90">
+                                                                    <button onClick={() => onManualAttendance(member.id, actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                         <CheckCircleIcon className="w-3.5 h-3.5"/> تحضير
                                                                     </button>
                                                                 )
@@ -1062,10 +1076,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                                     <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>سجل الحضور العام</h2>
                                     <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                        <button onClick={() => setCreateGroupModalOpen(true)} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
+                                        <button onClick={() => setCreateGroupModalOpen(true)} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
                                             <UsersIcon className="w-4 h-4" /> <span className="hidden sm:inline">إنشاء مجموعة</span>
                                         </button>
-                                        <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm transition-all disabled:opacity-50">
+                                        <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                                                 <path d="M3 3v5h5" />
@@ -1074,13 +1088,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             </svg>
                                             <span className="hidden sm:inline">مسح التحضير</span>
                                         </button>
-                                        <button onClick={() => setRepeatModalOpen(true)} disabled={!managementSelectedLectureId} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all disabled:opacity-50 ${isRamadanMode ? 'bg-purple-500/20 text-purple-500 hover:bg-purple-500/30' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
+                                        <button onClick={() => setRepeatModalOpen(true)} disabled={!managementSelectedLectureId} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-purple-500/20 text-purple-500 hover:bg-purple-500/30' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
                                             <CopyIcon className="w-4 h-4" /> <span className="hidden sm:inline">تكرار الحضور</span>
                                         </button>
-                                        <button onClick={handleExportPdf} disabled={!managementSelectedLectureId || isExportingPdf} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all disabled:opacity-50 ${isRamadanMode ? 'bg-yellow-500 text-slate-900' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                        <button onClick={handleExportPdf} disabled={!managementSelectedLectureId || isExportingPdf} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-yellow-500 text-slate-900' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                                             {isExportingPdf ? 'جاري التصدير...' : <><span className="hidden sm:inline">تصدير PDF</span><span className="sm:hidden">PDF</span></>}
                                         </button>
-                                        <button onClick={() => setDeleteLectureModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm transition-all disabled:opacity-50">
+                                        <button onClick={() => setDeleteLectureModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50">
                                             <TrashIcon className="w-4 h-4" /> <span className="hidden sm:inline">حذف المحاضرة</span>
                                         </button>
                                     </div>
@@ -1092,7 +1106,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <select 
                                             value={selectedDateFilter} 
                                             onChange={(e) => setSelectedDateFilter(e.target.value)}
-                                            className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all"
+                                            className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu"
                                         >
                                             {uniqueLectureDates.map(date => <option key={date} value={date}>{date}</option>)}
                                             {uniqueLectureDates.length === 0 && <option value="">لا توجد تواريخ</option>}
@@ -1103,7 +1117,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <select 
                                             value={managementSelectedLectureId || ''} 
                                             onChange={(e) => setManagementSelectedLectureId(e.target.value)}
-                                            className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all"
+                                            className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu"
                                         >
                                             {filteredLectures.map(l => <option key={l.qrCode} value={l.qrCode}>{l.courseName} ({l.timeSlot})</option>)}
                                             {filteredLectures.length === 0 && <option value="">لا توجد محاضرات</option>}
@@ -1113,7 +1127,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
                                 <div className="block sm:hidden space-y-4 mt-6">
                                     {managementAttendanceData.length > 0 ? managementAttendanceData.map((s) => (
-                                        <div key={s.id} className="bg-slate-800/30 border border-slate-700/50 p-4 rounded-2xl flex flex-col gap-3 transition-all">
+                                        <div key={s.id} className="bg-slate-800/30 border border-slate-700/50 p-4 rounded-2xl flex flex-col gap-3 transition-all transform-gpu">
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
@@ -1136,11 +1150,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                 </span>
                                                 {s.actualLectureId && (
                                                     s.status === 'حاضر' ? (
-                                                        <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 font-black text-sm flex items-center gap-1">
+                                                        <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
                                                             <XCircleIcon className="w-4 h-4"/> غياب
                                                         </button>
                                                     ) : (
-                                                        <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 font-black text-sm flex items-center gap-1">
+                                                        <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
                                                             <CheckCircleIcon className="w-4 h-4"/> تحضير
                                                         </button>
                                                     )
@@ -1165,7 +1179,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         </thead>
                                         <tbody className="divide-y divide-slate-800">
                                             {managementAttendanceData.map((s) => (
-                                                <tr key={s.id} className="hover:bg-slate-800/40 transition-colors">
+                                                <tr key={s.id} className="hover:bg-slate-800/40 transition-colors transform-gpu">
                                                     <td className="px-6 py-4 font-mono text-gray-500">{s.serialNumber}</td>
                                                     <td className="px-6 py-4 font-bold text-white">{s.name}</td>
                                                     <td className="px-6 py-4">
@@ -1178,11 +1192,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                     <td className="px-6 py-4">
                                                         {s.actualLectureId && (
                                                             s.status === 'حاضر' ? (
-                                                                <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all active:scale-90">
+                                                                <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                     <XCircleIcon className="w-3.5 h-3.5"/> غياب
                                                                 </button>
                                                             ) : (
-                                                                <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all active:scale-90">
+                                                                <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                     <CheckCircleIcon className="w-3.5 h-3.5"/> تحضير
                                                                 </button>
                                                             )
@@ -1235,8 +1249,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         />
                     </div>
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setCreateGroupModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" disabled={!newGroupName.trim()} className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إنشاء</button>
+                        <button type="button" onClick={() => setCreateGroupModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" disabled={!newGroupName.trim()} className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all transform-gpu shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>إنشاء</button>
                     </div>
                 </form>
             </Modal>
@@ -1269,7 +1283,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                 else newSet.add(s.id);
                                                 setSelectedMemberIds(newSet);
                                             }}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedMemberIds.has(s.id) ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all transform-gpu ${selectedMemberIds.has(s.id) ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}
                                         >
                                             {selectedMemberIds.has(s.id) ? 'محدد' : 'تحديد'}
                                         </button>
@@ -1281,8 +1295,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         </div>
                     </div>
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setAddMemberModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" disabled={selectedMemberIds.size === 0} className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50">إضافة المحددين ({selectedMemberIds.size})</button>
+                        <button type="button" onClick={() => setAddMemberModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" disabled={selectedMemberIds.size === 0} className="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all transform-gpu shadow-lg shadow-blue-600/20 disabled:opacity-50">إضافة المحددين ({selectedMemberIds.size})</button>
                     </div>
                 </form>
             </Modal>
@@ -1301,8 +1315,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         />
                     </div>
                     <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={() => setEditGroupNameModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">إلغاء</button>
-                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>حفظ</button>
+                        <button type="button" onClick={() => setEditGroupNameModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
+                        <button type="submit" className={`flex-1 px-6 py-3 font-bold rounded-2xl transition-all transform-gpu shadow-lg ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>حفظ</button>
                     </div>
                 </form>
             </Modal>
@@ -1378,7 +1392,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             type="submit" 
                             name="qrBtn"
                             disabled={isCreatingQr || !selectedCourseId} 
-                            className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-green-600/20 disabled:opacity-50"
+                            className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-green-600/20 disabled:opacity-50"
                         >
                             {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور بالباركود'}
                         </button>
@@ -1386,7 +1400,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             type="submit" 
                             name="manualBtn"
                             disabled={isCreatingQr || !selectedCourseId} 
-                            className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                            className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-purple-600/20 disabled:opacity-50"
                         >
                             {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور'}
                         </button>
@@ -1399,8 +1413,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <AlertTriangleIcon className="mx-auto h-16 w-16 text-yellow-500 mb-4" />
                     <p className="text-gray-300 font-bold">يوجد باركود فعال حالياً. إنشاء باركود جديد سيعطل القديم فوراً.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setConfirmModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">تراجع</button>
-                        <button onClick={handleConfirmGenerateNew} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">استمرار</button>
+                        <button onClick={() => setConfirmModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">تراجع</button>
+                        <button onClick={handleConfirmGenerateNew} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">استمرار</button>
                     </div>
                 </div>
             </Modal>
@@ -1415,8 +1429,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         </div>
                     )}
                     <div className="flex gap-3">
-                        <button onClick={() => setRepeatModalOpen(false)} disabled={isRepeating} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold disabled:opacity-50">إلغاء</button>
-                        <button onClick={handleConfirmRepeat} disabled={isRepeating} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white font-bold transition-all disabled:opacity-50">
+                        <button onClick={() => setRepeatModalOpen(false)} disabled={isRepeating} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold disabled:opacity-50 transition-all transform-gpu">إلغاء</button>
+                        <button onClick={handleConfirmRepeat} disabled={isRepeating} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white font-bold transition-all transform-gpu disabled:opacity-50">
                             {isRepeating ? 'جاري التكرار...' : 'تأكيد التكرار'}
                         </button>
                     </div>
@@ -1429,8 +1443,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <p className="text-gray-300 font-bold">هل أنت متأكد من مسح جميع سجلات حضور الطلاب <span className="text-red-400">لهذه المحاضرة فقط</span>؟</p>
                     <p className="text-gray-500 text-xs mt-2">المحاضرة ستبقى موجودة، ولكن سيتم تصفير التحضير.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setClearAttendanceModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">إلغاء</button>
-                        <button onClick={() => { if(managementSelectedLectureId) onClearLectureAttendance(managementSelectedLectureId); setClearAttendanceModalOpen(false); }} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">تأكيد المسح</button>
+                        <button onClick={() => setClearAttendanceModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button onClick={() => { if(managementSelectedLectureId) onClearLectureAttendance(managementSelectedLectureId); setClearAttendanceModalOpen(false); }} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">تأكيد المسح</button>
                     </div>
                 </div>
             </Modal>
@@ -1440,8 +1454,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <TrashIcon className="mx-auto h-16 w-16 text-red-500 mb-4" />
                     <p className="text-gray-300 font-bold">سيتم حذف المحاضرة وجميع سجلات حضور الطلاب المرتبطة بها نهائياً.</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setDeleteLectureModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold">تراجع</button>
-                        <button onClick={handleConfirmDeleteLecture} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold">حذف نهائي</button>
+                        <button onClick={() => setDeleteLectureModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">تراجع</button>
+                        <button onClick={handleConfirmDeleteLecture} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">حذف نهائي</button>
                     </div>
                 </div>
             </Modal>

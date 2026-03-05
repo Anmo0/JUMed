@@ -15,7 +15,7 @@ const ThemeToggle: React.FC = () => {
         // This caused a TypeScript error about unintentional comparison. The conditional logic has been removed to fix this.
         <button
             onClick={toggleTheme}
-            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900 transition-colors"
+            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900 transition-colors transform-gpu"
             aria-label="Switch to light mode"
         >
             <SunIcon className="w-5 h-5" />

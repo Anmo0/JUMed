@@ -107,13 +107,13 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose, q
                 )}
             </div>
 
-            <div className={`mt-6 p-4 rounded-xl text-center transition-colors ${isSuccess ? 'bg-green-900/20 text-green-400' : (isRamadanMode ? 'bg-yellow-900/10 text-yellow-500' : 'bg-slate-800/50 text-gray-300')}`}>
+            <div className={`mt-6 p-4 rounded-xl text-center transition-colors transform-gpu ${isSuccess ? 'bg-green-900/20 text-green-400' : (isRamadanMode ? 'bg-yellow-900/10 text-yellow-500' : 'bg-slate-800/50 text-gray-300')}`}>
                 <p className="text-lg font-bold">{message}</p>
             </div>
 
             <button 
                 onClick={onClose} 
-                className={`mt-4 w-full font-bold py-3 px-6 rounded-xl transition-all active:scale-95 ${isRamadanMode ? 'bg-slate-800 text-gray-400 hover:bg-slate-700' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
+                className={`mt-4 w-full font-bold py-3 px-6 rounded-xl transition-all transform-gpu active:scale-95 ${isRamadanMode ? 'bg-slate-800 text-gray-400 hover:bg-slate-700' : 'bg-slate-700 hover:bg-slate-600 text-white'}`}
             >
                 إغلاق الكاميرا
             </button>

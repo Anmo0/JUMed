@@ -82,7 +82,7 @@ function AppContent() {
     // 💡 استخدام التحميل الوهمي بدلاً من الشاشة البيضاء المملة
     if (isLoading || sessionLoading) {
         return (
-            <div className={`min-h-screen flex flex-col transition-colors duration-700 ${isRamadanMode ? 'ramadan-theme' : 'bg-slate-950'}`}>
+            <div className={`min-h-screen flex flex-col transition-colors duration-700 transform-gpu ${isRamadanMode ? 'ramadan-theme' : 'bg-slate-950'}`}>
                 <header className={`bg-slate-950/85 backdrop-blur-2xl border-b border-slate-800/50 h-14 sm:h-16 flex justify-between items-center px-4`}>
                      <div className="flex items-center gap-2">
                          <div className="h-6 w-6 rounded-full bg-blue-500/50 animate-pulse"></div>
@@ -96,7 +96,7 @@ function AppContent() {
 
     if (!currentUser) {
         return (
-            <div className={`min-h-screen transition-colors duration-700 ${isRamadanMode ? 'ramadan-theme' : 'bg-slate-950'}`}>
+            <div className={`min-h-screen transition-colors duration-700 transform-gpu ${isRamadanMode ? 'ramadan-theme' : 'bg-slate-950'}`}>
                 <Login onLogin={handleLogin} error={loginError} onDismissError={() => setLoginError(null)} isRamadanMode={isRamadanMode} />
             </div>
         );
@@ -104,7 +104,7 @@ function AppContent() {
 
     if (currentUser.role === UserRole.Student && !selectedBatchId) {
         return (
-            <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-700 ${isRamadanMode ? 'ramadan-theme' : 'bg-slate-950'}`}>
+            <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-700 transform-gpu ${isRamadanMode ? 'ramadan-theme' : 'bg-slate-950'}`}>
                 <div className="w-full max-w-md space-y-8 animate-fade-in">
                     <div className="text-center">
                         <LogoIcon className="w-20 h-20 text-blue-500 mx-auto mb-6" />
@@ -146,7 +146,7 @@ function AppContent() {
             />
 
             {currentUser && (
-                <header className={`bg-slate-950/85 backdrop-blur-2xl border-b border-slate-800/50 shadow-md sticky top-0 z-40 transition-colors duration-700 ${isRamadanMode ? 'ramadan-header' : ''}`}>
+                <header className={`bg-slate-950/85 backdrop-blur-2xl border-b border-slate-800/50 shadow-md sticky top-0 z-40 transition-colors duration-700 transform-gpu ${isRamadanMode ? 'ramadan-header' : ''}`}>
                     <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex justify-between items-center">
                         <div className="flex items-center gap-2 sm:gap-3">
                             <div className="text-lg sm:text-xl font-bold text-blue-400 flex items-center gap-1.5 sm:gap-2">
@@ -164,11 +164,11 @@ function AppContent() {
                             )}
                         </div>
                         <div className="flex items-center gap-2 sm:gap-4">
-                           <button onClick={toggleRamadanMode} className={`p-1.5 sm:p-2 rounded-full transition-all ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-800 text-gray-400 hover:text-yellow-400'}`} title={isRamadanMode ? "إيقاف ثيم رمضان" : "تفعيل ثيم رمضان"}>
+                           <button onClick={toggleRamadanMode} className={`p-1.5 sm:p-2 rounded-full transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-800 text-gray-400 hover:text-yellow-400'}`} title={isRamadanMode ? "إيقاف ثيم رمضان" : "تفعيل ثيم رمضان"}>
                                 <span className="text-base sm:text-lg">🌙</span>
                            </button>
                            <span className="text-sm sm:text-base hidden sm:inline">أهلاً, {currentUser.name}</span>
-                           <button onClick={handleLogout} className="flex items-center text-gray-400 hover:text-red-400 transition-colors p-1.5 sm:p-2">
+                           <button onClick={handleLogout} className="flex items-center text-gray-400 hover:text-red-400 transition-colors transform-gpu p-1.5 sm:p-2">
                                 <LogOutIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                                 <span className="hidden sm:inline ms-2">خروج</span>
                            </button>
