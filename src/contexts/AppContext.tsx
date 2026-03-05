@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // 👈 استيراد React Query
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { User, Student, Batch, Lecture, AttendanceRecord, Group, Course, UserRole } from '../types';
 import { 
   getAttendance, getLectures, getDeviceBindingSetting, getAbsencePercentageSetting, 
@@ -8,14 +8,13 @@ import {
   getStudents, getGroups, getAbsenceWeightSetting,
   setAbsenceWeightSetting as apiSetAbsenceWeightSetting,
   addStudent as apiAddStudent, updateStudent as apiUpdateStudent, deleteStudent as apiDeleteStudent,
-  createGroup as apiCreateGroup, addLecture as apiAddLecture, deleteLecture as apiDeleteLecture,
+  createGroup as apiCreateGroup, deleteGroup as apiDeleteGroup, addLecture as apiAddLecture, deleteLecture as apiDeleteLecture,
   addAttendanceRecord as apiAddAttendanceRecord, removeAttendanceRecord as apiRemoveAttendanceRecord,
   addBulkAttendanceRecords as apiAddBulkAttendanceRecords, resetStudentDevice as apiResetStudentDevice,
   resetAllStudentsDevices as apiResetAllStudentsDevices, setDeviceBindingSetting as apiSetDeviceBindingSetting,
   setAbsencePercentageSetting as apiSetAbsencePercentageSetting, clearAllAttendance as apiClearAllAttendance,
   clearAllLectures as apiClearAllLectures, recalculateAllSerialNumbers as apiRecalculateAllSerialNumbers,
   clearLectureAttendance as apiClearLectureAttendance
-  deleteGroup as apiDeleteGroup
 } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { useSession } from '../hooks/useSession';
@@ -61,6 +60,7 @@ interface AppContextType extends AppState {
   deleteStudent: (id: string) => Promise<void>;
   updateGroupName: (groupId: string, newName: string) => void;
   addGroupLocal: (groupName: string) => Promise<void>;
+  deleteGroupLocal: (groupId: string) => Promise<void>;
   deleteAllGroupsLocal: () => void;
   generateQrCode: (details: { date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string, isManual?: boolean }, callbacks: { onSuccess: () => void, onError: (message: string) => void }) => void;
   deleteLecture: (lectureId: string) => Promise<void>;
@@ -85,14 +85,13 @@ interface AppContextType extends AppState {
   currentBatch: Batch | undefined;
   setBatches: React.Dispatch<React.SetStateAction<Batch[]>>;
   setCourses: React.Dispatch<React.SetStateAction<Course[]>>;
-  deleteGroupLocal: (groupId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
-  const queryClient = useQueryClient(); // 👈 استدعاء عميل الكاش
+  const queryClient = useQueryClient(); 
   const pendingAttendance = React.useRef<AttendanceRecord[]>([]);
   
   const [state, setState] = useState<AppState>({
@@ -110,7 +109,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  // 💡 المزامنة الذكية لوضع عدم الاتصال (Offline Sync)
   useEffect(() => {
     const syncOfflineData = async () => {
         const offlineData = localStorage.getItem('anmo_offline_attendance');
@@ -123,7 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     if (!result.error) {
                         localStorage.removeItem('anmo_offline_attendance');
                         toast.success('تمت مزامنة البيانات بنجاح!', { id: 'sync' });
-                        queryClient.invalidateQueries({ queryKey: ['attendance'] }); // 👈 تحديث الكاش
+                        queryClient.invalidateQueries({ queryKey: ['attendance'] }); 
                     } else {
                         toast.error('فشلت المزامنة، سنحاول لاحقاً.', { id: 'sync' });
                     }
@@ -138,7 +136,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('online', syncOfflineData);
   }, [queryClient]);
 
-  // 🚀 جلب البيانات الأساسية باستخدام React Query للكاش السريع
   const { data: globalSettings } = useQuery({
       queryKey: ['globalSettings'],
       queryFn: async () => {
@@ -154,7 +151,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: fetchedLectures } = useQuery({ queryKey: ['lectures'], queryFn: getLectures });
   const { data: fetchedAttendance } = useQuery({ queryKey: ['attendance'], queryFn: getAttendance });
 
-  // 🚀 جلب بيانات الدفعة باستخدام React Query (تعمل فقط إذا تم اختيار دفعة)
   const { data: batchData } = useQuery({
       queryKey: ['batchData', state.selectedBatchId],
       enabled: !!state.selectedBatchId,
@@ -178,7 +174,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
   });
 
-  // 💡 مزامنة الكاش السريع مع حالة التطبيق (State Sync)
   useEffect(() => {
       if (globalSettings || fetchedBatches || fetchedLectures || fetchedAttendance) {
           updateState(prev => ({
@@ -203,7 +198,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
   }, [batchData, state.selectedBatchId, updateState]);
 
-  // 📡 التحديث المباشر (Realtime) - يراقب قاعدة البيانات للحضور الفوري
   useEffect(() => {
     if (!state.selectedBatchId) return;
     const channel = supabase.channel('attendance-changes')
@@ -282,8 +276,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, [updateState]);
 
-  // --- بقية الدوال (الإضافة، الحذف، التعديل) كما هي لضمان الأمان وعدم تعطل أي شيء ---
-  
   const addStudent = useCallback(async (data: Omit<Student, 'id'>) => {
     if (!state.selectedBatchId) { toast.error('يرجى اختيار الدفعة أولاً'); return; }
     const { data: newStudent, error } = await apiAddStudent({ ...data, batchId: state.selectedBatchId });
@@ -326,6 +318,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (error) { toast.error(error); } 
     else if (data) { updateState(prev => ({ groups: [...(prev.groups || []), data] })); toast.success(`تم إنشاء مجموعة "${groupName}"`); }
   }, [state.selectedBatchId, user, updateState]);
+
+  const deleteGroupLocal = useCallback(async (groupId: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه المجموعة؟ سيتم إخراج جميع الطلاب منها.')) return;
+    const { error } = await apiDeleteGroup(groupId);
+    if (error) { 
+        toast.error(error); 
+    } else {
+        updateState(prev => ({
+            groups: (prev.groups || []).filter(g => g.id !== groupId),
+            students: (prev.students || []).map(s => s.groupId === groupId ? { ...s, groupId: undefined, groupName: undefined, isLeader: false } : s)
+        }));
+        toast.success('تم حذف المجموعة بنجاح');
+    }
+  }, [updateState]);
 
   const deleteAllGroupsLocal = useCallback(() => {
     updateState(prev => ({
@@ -550,25 +556,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: AppContextType = {
     ...state, selectBatch, refreshStudents, refreshBatches, toggleRamadanMode, addStudent, updateStudent, deleteStudent,
-    updateGroupName, addGroupLocal, deleteAllGroupsLocal, generateQrCode, deleteLecture, manualAttendance, removeAttendance,
+    updateGroupName, addGroupLocal, deleteGroupLocal, deleteAllGroupsLocal, generateQrCode, deleteLecture, manualAttendance, removeAttendance,
     recordAttendance, repeatPreviousAttendance, resetStudentDevice, resetAllDevices, updateAbsenceWeight, toggleDeviceBinding,
     toggleAbsencePercentage, toggleLocationRestriction, clearLectureAttendance, clearAllAttendance, clearAllLectures,
-    recalculateSerials, filteredStudents, filteredLectures, filteredAttendance, activeLecture, studentCourses, currentBatch, setBatches, setCourses, deleteGroupLocal, 
+    recalculateSerials, filteredStudents, filteredLectures, filteredAttendance, activeLecture, studentCourses, currentBatch, setBatches, setCourses,
   };
-
-  const deleteGroupLocal = useCallback(async (groupId: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه المجموعة؟ سيتم إخراج جميع الطلاب منها.')) return;
-    const { error } = await apiDeleteGroup(groupId);
-    if (error) { 
-        toast.error(error); 
-    } else {
-        updateState(prev => ({
-            groups: (prev.groups || []).filter(g => g.id !== groupId),
-            students: (prev.students || []).map(s => s.groupId === groupId ? { ...s, groupId: undefined, groupName: undefined, isLeader: false } : s)
-        }));
-        toast.success('تم حذف المجموعة بنجاح');
-    }
-  }, [updateState]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

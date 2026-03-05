@@ -26,7 +26,7 @@ const formatTimeToArabic = (time24: string) => {
     let hour = parseInt(hourString, 10);
     const ampm = hour >= 12 ? 'م' : 'ص';
     hour = hour % 12;
-    hour = hour ? hour : 12; // تحويل الصفر إلى 12
+    hour = hour ? hour : 12; 
     const paddedHour = hour.toString().padStart(2, '0');
     return `${paddedHour}:${minute} ${ampm}`;
 };
@@ -42,6 +42,7 @@ interface StudentDashboardProps {
     onUpdateStudent: (id: string, updates: Partial<Student>) => Promise<void>;
     onUpdateGroupName: (groupId: string, newName: string) => void;
     onAddGroupLocal?: (groupName: string) => void;
+    onDeleteGroupLocal?: (groupId: string) => void; 
     activeLecture: Lecture | null;
     lectures: Lecture[];
     courses: Course[];
@@ -53,7 +54,7 @@ interface StudentDashboardProps {
     isRamadanMode: boolean;
 }
 
-const QR_CODE_VALIDITY = 15 * 60 * 1000; // 15 minutes in ms
+const QR_CODE_VALIDITY = 15 * 60 * 1000; 
 
 const TabButton: React.FC<{ 
     isActive: boolean; 
@@ -86,6 +87,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     onUpdateStudent,
     onUpdateGroupName,
     onAddGroupLocal,
+    onDeleteGroupLocal,
     activeLecture, 
     lectures,
     courses,
@@ -100,10 +102,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         return (sessionStorage.getItem('studentActiveTab') as any) || 'personal';
     });
 
-    // 💡 تعريف مشرف الدفعة (الليدر الأساسي)
     const isBatchAdmin = student?.canManageAttendance || student?.isBatchLeader || false;
 
-    // 💡 حالات إدارة المجموعات
     const [managementSelectedGroupId, setManagementSelectedGroupId] = useState<string | null>(null);
     const activeGroupId = isBatchAdmin && managementSelectedGroupId ? managementSelectedGroupId : student?.groupId;
     const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId) || {name: student?.groupName}, [groups, activeGroupId, student?.groupName]);
@@ -160,7 +160,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [isClearAttendanceModalOpen, setClearAttendanceModalOpen] = useState(false);
     
     const [isExportingPdf, setIsExportingPdf] = useState(false);
-    const [isGroupExportingPdf, setIsGroupExportingPdf] = useState(false); // لحالة تصدير المجموعة
+    const [isGroupExportingPdf, setIsGroupExportingPdf] = useState(false); 
     
     const [selectedDateFilter, setSelectedDateFilter] = useState<string>('');
     const [managementSelectedLectureId, setManagementSelectedLectureId] = useState<string | null>(null);
@@ -214,9 +214,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     useEffect(() => {
         getLastCourseName().then(name => {
-            if (name) {
-                setQrForm(prev => ({ ...prev, courseName: name }));
-            }
+            if (name) setQrForm(prev => ({ ...prev, courseName: name }));
         });
     }, []);
 
@@ -227,11 +225,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     };
     
     const handleGenerateNewClick = () => {
-        if (activeLecture) {
-            setConfirmModalOpen(true);
-        } else {
-            handleOpenQrModal();
-        }
+        if (activeLecture) setConfirmModalOpen(true);
+        else handleOpenQrModal();
     };
 
     const handleConfirmGenerateNew = () => {
@@ -243,26 +238,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         if (courses.length > 0 && !selectedCourseId) {
             const savedCourseId = localStorage.getItem('lastSelectedCourseId');
             const isValidSavedCourse = courses.some(c => c.id === savedCourseId);
-            
-            if (savedCourseId && isValidSavedCourse) {
-                setSelectedCourseId(savedCourseId);
-            } else {
-                setSelectedCourseId(courses[0].id);
-            }
+            if (savedCourseId && isValidSavedCourse) setSelectedCourseId(savedCourseId);
+            else setSelectedCourseId(courses[0].id);
         }
     }, [courses, selectedCourseId]);
 
     useEffect(() => {
-        if (selectedCourseId) {
-            localStorage.setItem('lastSelectedCourseId', selectedCourseId);
-        }
+        if (selectedCourseId) localStorage.setItem('lastSelectedCourseId', selectedCourseId);
     }, [selectedCourseId]);
 
    const handleQrFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
         const isManualMode = (e.nativeEvent as any).submitter?.name === 'manualBtn';
-
         setIsCreatingQr(true);
         setQrError(null);
 
@@ -313,7 +300,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     const managementAttendanceData = useMemo(() => {
         if (!managementSelectedLectureId) return [];
-        
         const actualLecture = lectures.find(l => l.qrCode === managementSelectedLectureId || l.id === managementSelectedLectureId);
         const actualLectureId = actualLecture?.id || managementSelectedLectureId;
 
@@ -324,18 +310,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             const isPresent = presentStudentIds.has(s.id);
             const record = isPresent ? currentAttendance.find(r => r.studentId === s.id) : null;
             const status = isPresent ? 'حاضر' : 'غائب';
-            
-            return {
-                ...s,
-                status,
-                record,
-                actualLectureId
-            };
+            return { ...s, status, record, actualLectureId };
         }).sort((a, b) => Number(a.serialNumber) - Number(b.serialNumber));
-
     }, [allStudents, attendanceRecords, managementSelectedLectureId, lectures]);
 
-    // 💡 دالة تصدير PDF خاصة بـ "تحضير الدفعة" كاملة (للمشرفين فقط)
     const handleExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId || l.id === managementSelectedLectureId);
         if (!selectedLecture) return;
@@ -381,7 +359,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 container.style.cssText += styles.container;
 
                 let htmlContent = `<div>`;
-
                 if (pageNum === 1) {
                     htmlContent += `
                         <div style="${styles.headerContainer}">
@@ -392,7 +369,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                             </div>
                         </div>
-
                         <div style="${styles.infoCard}">
                             <div style="${styles.infoItem}">
                                 <span style="${styles.infoLabel}">المقرر</span>
@@ -436,14 +412,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     const rowBg = globalIndex % 2 === 0 ? '#ffffff' : '#f8fafc';
                     const finalBg = isAbsent ? '#fff1f2' : rowBg; 
                     
-                    let displayStatus = student.status;
-                    let badgeStyle = styles.statusAbsent;
-                    
-                    if (student.status === 'حاضر') {
-                         displayStatus = 'حاضر';
-                         badgeStyle = styles.statusPresent;
-                    }
-                    
+                    let displayStatus = student.status === 'حاضر' ? 'حاضر' : student.status;
+                    let badgeStyle = student.status === 'حاضر' ? styles.statusPresent : styles.statusAbsent;
                     let statusBadge = `<span style="${badgeStyle}">${displayStatus}</span>`;
                     
                     if (student.record?.isOutsideRadius) {
@@ -475,40 +445,37 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     onclone: (clonedDoc: any) => {
                         const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
                         links.forEach((link: any) => {
-                            if (!link.href.includes('fonts.googleapis.com')) {
-                                link.remove();
-                            }
+                            if (!link.href.includes('fonts.googleapis.com')) link.remove();
                         });
-                        const styles = clonedDoc.querySelectorAll('style');
-                        styles.forEach((style: any) => style.remove());
+                        clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove());
                     }
                 });
                 const imgData = canvas.toDataURL('image/jpeg', 0.8);
-                
                 const imgProps = pdf.getImageProperties(imgData);
                 const pdfImgHeight = (imgProps.height * imgWidth) / imgProps.width;
 
-                if (pageNum > 1) {
-                    pdf.addPage();
-                }
-
+                if (pageNum > 1) pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
                 document.body.removeChild(container);
-                
                 pageNum++;
             }
-
             pdf.save(`attendance-batch-${selectedLecture.courseName}-${selectedLecture.date}.pdf`);
-
         } catch (error) {
-            console.error("Failed to generate PDF:", error);
             alert("حدث خطأ أثناء إنشاء ملف PDF.");
         } finally {
             setIsExportingPdf(false);
         }
     };
 
-    // 💡 دالة تصدير PDF خاصة بـ "المجموعة" فقط (للقائد وللمشرف)
+    const groupMembers = useMemo(() => {
+        if (!activeGroupId) return [];
+        return allStudents.filter(s => s.groupId === activeGroupId).sort((a,b) => a.name.localeCompare(b.name));
+    }, [allStudents, activeGroupId]);
+
+    const selectedLectureForGroup = useMemo(() => {
+        return lectures.find(l => l.qrCode === selectedLectureId) || null;
+    }, [lectures, selectedLectureId]);
+
     const handleGroupExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId || l.id === selectedLectureId);
         if (!selectedLecture || !activeGroup) return;
@@ -564,29 +531,23 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             pdf.save(`Attendance-Group-${activeGroup.name}-${selectedLecture.date}.pdf`);
             document.body.removeChild(container);
         } catch (error) {
-            console.error(error);
             alert("حدث خطأ أثناء تصدير الـ PDF للمجموعة");
         } finally {
             setIsGroupExportingPdf(false);
         }
     };
 
-
     useEffect(() => {
         if (!activeLecture?.createdAt) {
-            setTimeLeft(null);
-            return;
+            setTimeLeft(null); return;
         }
-
         const calculateTimeLeft = () => {
             const elapsedTime = Date.now() - new Date(activeLecture.createdAt).getTime();
             const remaining = QR_CODE_VALIDITY - elapsedTime;
             setTimeLeft(remaining > 0 ? remaining : 0);
         };
-
         calculateTimeLeft();
         const interval = setInterval(calculateTimeLeft, 1000);
-
         return () => clearInterval(interval);
     }, [activeLecture]);
     
@@ -607,46 +568,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [lectures, attendanceRecords, student?.id]);
 
-    const groupMembers = useMemo(() => {
-        if (!activeGroupId) return [];
-        return allStudents.filter(s => s.groupId === activeGroupId).sort((a,b) => a.name.localeCompare(b.name));
-    }, [allStudents, activeGroupId]);
-
-    const selectedLectureForGroup = useMemo(() => {
-        return lectures.find(l => l.qrCode === selectedLectureId) || null;
-    }, [lectures, selectedLectureId]);
-
-
     const handleInitiateScan = () => {
         setScanError(null);
         setIsLocating(true);
-        
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                setUserLocation({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                });
-                setIsLocating(false);
-                setScannerOpen(true);
+                setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+                setIsLocating(false); setScannerOpen(true);
             },
             (error: GeolocationPositionError) => {
                 setIsLocating(false);
                 let message = 'فشل في تحديد الموقع.';
-                switch(error.code) {
-                    case GeolocationPositionError.PERMISSION_DENIED:
-                        message = 'تم رفض إذن الوصول للموقع. يجب السماح بذلك قبل مسح الباركود.';
-                        break;
-                    case GeolocationPositionError.POSITION_UNAVAILABLE:
-                        message = 'معلومات الموقع غير متاحة حاليًا.';
-                        break;
-                    case GeolocationPositionError.TIMEOUT:
-                        message = 'انتهت مهلة طلب الموقع.';
-                        break;
-                    default:
-                        message = `حدث خطأ غير متوقع: ${error.message}`;
-                        break;
-                }
+                if(error.code === GeolocationPositionError.PERMISSION_DENIED) message = 'تم رفض إذن الوصول للموقع. يجب السماح بذلك قبل مسح الباركود.';
                 setScanError(message);
             },
             { enableHighAccuracy: true }
@@ -656,16 +589,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const handleScanSuccess = useCallback(async () => {
         if (!userLocation) {
             setScanError("حدث خطأ: فقدان بيانات الموقع بعد المسح.");
-            setScannerOpen(false);
-            return;
+            setScannerOpen(false); return;
         }
-
         setScanError(null);
         const result = await onRecordAttendance(userLocation);
-
         if (!result.success) {
-            setScanError(result.message);
-            alert(result.message);
+            setScanError(result.message); alert(result.message);
         }
         setScannerOpen(false);
     }, [onRecordAttendance, userLocation]);
@@ -680,49 +609,34 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const handleCreateGroup = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!student?.id || !student?.batchId || !newGroupName.trim()) return;
-        
         const { data: newGroup, error } = await createGroup(newGroupName, student.batchId, student.id);
-        if (error || !newGroup) {
-            alert(error || 'فشل إنشاء المجموعة');
-            return;
-        }
+        if (error || !newGroup) return alert(error || 'فشل إنشاء المجموعة');
         
         alert('تم إنشاء المجموعة بنجاح! يمكنك إدارتها وربط الطلاب بها من قائمة المجموعات.');
         if (onAddGroupLocal) onAddGroupLocal(newGroup.name);
-        
-        setCreateGroupModalOpen(false);
-        setNewGroupName('');
+        setCreateGroupModalOpen(false); setNewGroupName('');
     };
 
     const handleAddMembers = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activeGroupId) return;
-        
         for (const memberId of selectedMemberIds) {
             const member = allStudents.find(s => s.id === memberId);
-            if (member) {
-                onUpdateStudent(member.id, { groupId: activeGroupId });
-            }
+            if (member) onUpdateStudent(member.id, { groupId: activeGroupId });
         }
-        
-        setAddMemberModalOpen(false);
-        setSelectedMemberIds(new Set());
+        setAddMemberModalOpen(false); setSelectedMemberIds(new Set());
     };
 
     const handleUpdateGroupName = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activeGroupId || !editGroupName.trim()) return;
-
         const { data: updatedGroup, error } = await updateGroup(activeGroupId, editGroupName);
-        if (error || !updatedGroup) {
-            alert(error || 'فشل تحديث اسم المجموعة');
-            return;
-        }
+        if (error || !updatedGroup) return alert(error || 'فشل تحديث اسم المجموعة');
 
         onUpdateGroupName(activeGroupId, updatedGroup.name);
         setEditGroupNameModalOpen(false);
     };
-    
+
     const hasAttendedCurrentLecture = activeLecture && student?.id && attendanceRecords.some(rec => rec.studentId === student.id && rec.lectureId === activeLecture.qrCode);
 
     if (!student) {
@@ -735,19 +649,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             );
         }
-        
         return (
             <div className="flex flex-col items-center justify-center p-12 text-center min-h-[60vh] animate-fade-in">
                 <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl max-w-md w-full">
                     <AlertTriangleIcon className="w-16 h-16 text-yellow-500 mx-auto mb-6" />
                     <h2 className="text-2xl font-black text-white mb-4">بيانات الطالب غير متوفرة</h2>
                     <p className="text-gray-400 mb-8 leading-relaxed">
-                        لم نتمكن من العثور على بياناتك في الدفعة الحالية. يرجى التأكد من اختيار الدفعة الصحيحة أو مراجعة المسؤول.
+                        لم نتمكن من العثور على بياناتك في الدفعة الحالية. يرجى التأكد من اختيار الدفعة الصحيحة.
                     </p>
-                    <button 
-                        onClick={() => window.location.reload()}
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all transform-gpu shadow-lg shadow-blue-600/20"
-                    >
+                    <button onClick={() => window.location.reload()} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all transform-gpu shadow-lg shadow-blue-600/20">
                         إعادة تحميل الصفحة
                     </button>
                 </div>
@@ -756,16 +666,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }
 
     const buttonContent = isLocating ? (
-        <>
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <span>جاري تحديد الموقع...</span>
-        </>
-    ) : (
-        <>
-            <CameraIcon className="w-6 h-6" />
-            <span>مسح الباركود</span>
-        </>
-    );
+        <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>جاري تحديد الموقع...</span></>
+    ) : (<><CameraIcon className="w-6 h-6" /><span>مسح الباركود</span></>);
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in space-y-6">
@@ -774,53 +676,19 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">أهلاً بك، {student.name}</h1>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className={`font-mono text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-lg border ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-slate-800/50 text-gray-400 border-slate-700/50'}`}>ID: {student.universityId}</span>
-                        {student.groupName && (
-                            <span className={`text-[10px] font-black px-2 sm:px-3 py-1 rounded-full border uppercase tracking-wider ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
-                                {student.groupName}
-                            </span>
-                        )}
-                        {student.isLeader && (
-                            <span className={`text-[10px] font-black px-2 sm:px-3 py-1 rounded-full border uppercase tracking-wider ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}>
-                                رئيس مجموعة
-                            </span>
-                        )}
-                        {isBatchAdmin && (
-                            <span className={`text-[10px] font-black px-2 sm:px-3 py-1 rounded-full border uppercase tracking-wider ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
-                                مشرف دفعة
-                            </span>
-                        )}
+                        {student.groupName && <span className={`text-[10px] font-black px-2 sm:px-3 py-1 rounded-full border uppercase tracking-wider ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{student.groupName}</span>}
+                        {student.isLeader && <span className={`text-[10px] font-black px-2 sm:px-3 py-1 rounded-full border uppercase tracking-wider ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}>رئيس مجموعة</span>}
+                        {isBatchAdmin && <span className={`text-[10px] font-black px-2 sm:px-3 py-1 rounded-full border uppercase tracking-wider ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>مشرف دفعة</span>}
                     </div>
                 </div>
                 
-                {/* 💡 أزرار التبويبات تظهر للجميع حسب صلاحياتهم */}
                 <div className="bg-slate-900/40 p-1.5 rounded-[1.25rem] border border-slate-800/60 flex flex-row gap-1 w-full sm:w-auto shadow-xl overflow-x-auto custom-scrollbar">
-                    <TabButton 
-                        isActive={activeTab === 'personal'} 
-                        onClick={() => setActiveTab('personal')} 
-                        title="حسابي" 
-                        icon={<UsersIcon className="w-4 h-4"/>} 
-                        isRamadanMode={isRamadanMode}
-                    />
-                    <TabButton 
-                        isActive={activeTab === 'group'} 
-                        onClick={() => setActiveTab('group')} 
-                        title={isBatchAdmin ? "المجموعات" : "مجموعتي"} 
-                        icon={<ClipboardListIcon className="w-4 h-4"/>} 
-                        isRamadanMode={isRamadanMode}
-                    />
-                    {isBatchAdmin && (
-                        <TabButton 
-                            isActive={activeTab === 'management'} 
-                            onClick={() => setActiveTab('management')} 
-                            title="تحضير الدفعة" 
-                            icon={<EditIcon className="w-4 h-4"/>} 
-                            isRamadanMode={isRamadanMode}
-                        />
-                    )}
+                    <TabButton isActive={activeTab === 'personal'} onClick={() => setActiveTab('personal')} title="حسابي" icon={<UsersIcon className="w-4 h-4"/>} isRamadanMode={isRamadanMode} />
+                    {(isBatchAdmin || student?.isLeader) && <TabButton isActive={activeTab === 'group'} onClick={() => setActiveTab('group')} title={isBatchAdmin ? "المجموعات" : "مجموعتي"} icon={<ClipboardListIcon className="w-4 h-4"/>} isRamadanMode={isRamadanMode} />}
+                    {isBatchAdmin && <TabButton isActive={activeTab === 'management'} onClick={() => setActiveTab('management')} title="تحضير الدفعة" icon={<EditIcon className="w-4 h-4"/>} isRamadanMode={isRamadanMode} />}
                 </div>
              </div>
 
-            {/* تبويبة حسابي */}
             {activeTab === 'personal' && (
                 <div className="space-y-6 sm:space-y-8 animate-fade-in">
                     <AbsenceWarning courses={courses} lectures={lectures} attendanceRecords={attendanceRecords} studentId={student.id} isRamadanMode={isRamadanMode} />
@@ -830,9 +698,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                              {activeLecture && (
                                 <div className="flex flex-col items-center bg-slate-800/80 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl sm:rounded-[1.5rem] border-2 border-slate-700/50 shadow-inner w-full sm:w-auto">
                                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">الوقت المتبقي</p>
-                                    <div className={`font-mono text-2xl sm:text-3xl font-black ${timeLeft !== null && timeLeft > 0 ? 'text-blue-400' : 'text-red-500'} tracking-tighter`}>
-                                        {timeLeft !== null ? formatTime(timeLeft) : '00:00'}
-                                    </div>
+                                    <div className={`font-mono text-2xl sm:text-3xl font-black ${timeLeft !== null && timeLeft > 0 ? 'text-blue-400' : 'text-red-500'} tracking-tighter`}>{timeLeft !== null ? formatTime(timeLeft) : '00:00'}</div>
                                 </div>
                             )}
                         </div>
@@ -841,33 +707,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             {activeLecture ? (
                                 hasAttendedCurrentLecture ? (
                                     <div className={`flex flex-col items-center justify-center p-6 sm:p-10 border-2 border-dashed rounded-3xl sm:rounded-[2rem] animate-pop-in ${isRamadanMode ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-green-500/5 border-green-500/30'}`}>
-                                         <div className={`p-4 rounded-full shadow-lg mb-4 sm:mb-6 ${isRamadanMode ? 'bg-yellow-500 shadow-yellow-500/40' : 'bg-green-500 shadow-green-500/40'}`}>
-                                            <CheckCircleIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white"/>
-                                         </div>
+                                         <div className={`p-4 rounded-full shadow-lg mb-4 sm:mb-6 ${isRamadanMode ? 'bg-yellow-500 shadow-yellow-500/40' : 'bg-green-500 shadow-green-500/40'}`}><CheckCircleIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white"/></div>
                                         <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'text-yellow-500' : 'text-green-400'}`}>تم تسجيل حضورك بنجاح!</h2>
                                         <p className="text-gray-400 mt-2 font-medium text-sm sm:text-base">أنت الآن حاضر في محاضرة <span className="text-white">{activeLecture.courseName}</span>.</p>
                                     </div>
                                 ) : (
                                     <div className={`flex flex-col items-center justify-center p-6 sm:p-10 border-2 border-dashed rounded-3xl sm:rounded-[2rem] animate-fade-in ${isRamadanMode ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-blue-500/5 border-blue-500/30'}`}>
                                         <h2 className={`text-xl sm:text-2xl font-black mb-2 ${isRamadanMode ? 'ramadan-text-gold' : 'text-blue-400'}`}>محاضرة "{activeLecture.courseName}" متاحة</h2>
-                                        <p className="text-gray-400 mb-6 sm:mb-8 max-w-sm font-medium text-sm sm:text-base">
-                                            قم بمسح الباركود المعروض أمامك الآن لتأكيد تواجدك في القاعة.
-                                        </p>
-                                        <button
-                                            onClick={handleInitiateScan}
-                                            disabled={(timeLeft !== null && timeLeft <= 0) || isLocating}
-                                            className={`group relative flex items-center justify-center gap-3 w-full max-w-sm px-6 sm:px-8 py-4 sm:py-5 text-white font-black rounded-2xl transition-all transform transform-gpu hover:-translate-y-1 active:scale-95 disabled:bg-slate-800 disabled:shadow-none animate-pulse-glow ${isRamadanMode ? 'bg-yellow-600 shadow-[0_0_30px_rgba(202,138,4,0.3)] hover:shadow-[0_0_40px_rgba(202,138,4,0.5)]' : 'bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_40px_rgba(37,99,235,0.5)]'}`}
-                                        >
-                                            {buttonContent}
-                                        </button>
+                                        <p className="text-gray-400 mb-6 sm:mb-8 max-w-sm font-medium text-sm sm:text-base">قم بمسح الباركود المعروض أمامك الآن لتأكيد تواجدك في القاعة.</p>
+                                        <button onClick={handleInitiateScan} disabled={(timeLeft !== null && timeLeft <= 0) || isLocating} className={`group relative flex items-center justify-center gap-3 w-full max-w-sm px-6 sm:px-8 py-4 sm:py-5 text-white font-black rounded-2xl transition-all transform transform-gpu hover:-translate-y-1 active:scale-95 disabled:bg-slate-800 disabled:shadow-none animate-pulse-glow ${isRamadanMode ? 'bg-yellow-600 shadow-[0_0_30px_rgba(202,138,4,0.3)] hover:shadow-[0_0_40px_rgba(202,138,4,0.5)]' : 'bg-blue-600 shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_40px_rgba(37,99,235,0.5)]'}`}>{buttonContent}</button>
                                         {scanError && <p className="mt-4 text-red-500 font-bold bg-red-500/10 px-4 py-2 rounded-xl text-xs sm:text-sm border border-red-500/20">{scanError}</p>}
                                     </div>
                                 )
                             ) : (
                                  <div className="flex flex-col items-center justify-center p-8 sm:p-12 bg-slate-800/20 border-2 border-dashed border-slate-700/50 rounded-3xl sm:rounded-[2rem] animate-fade-in">
-                                    <div className="bg-slate-800 p-4 rounded-full mb-4 sm:mb-6">
-                                        <AlertTriangleIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-500" />
-                                    </div>
+                                    <div className="bg-slate-800 p-4 rounded-full mb-4 sm:mb-6"><AlertTriangleIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-500" /></div>
                                     <h2 className="text-lg sm:text-xl font-bold text-gray-400">لا توجد محاضرة نشطة</h2>
                                     <p className="text-gray-500 mt-1 text-sm sm:text-base">بانتظار قيام الدكتور بتشغيل النظام...</p>
                                 </div>
@@ -875,11 +729,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         </div>
 
                         <div className="mt-12 sm:mt-16 animate-slide-in-up" style={{ animationDelay: '200ms' }}>
-                            <h2 className="text-lg sm:text-xl font-black text-white mb-4 sm:mb-6 flex items-center gap-2">
-                                <span className="w-1.5 h-5 sm:h-6 bg-blue-500 rounded-full"></span>
-                                سجل الحضور الأخير
-                            </h2>
-                            
+                            <h2 className="text-lg sm:text-xl font-black text-white mb-4 sm:mb-6 flex items-center gap-2"><span className="w-1.5 h-5 sm:h-6 bg-blue-500 rounded-full"></span>سجل الحضور الأخير</h2>
                             <div className="space-y-3 sm:space-y-4">
                                 {attendanceRecords.filter(r => r.studentId === student.id).length > 0 ? (
                                     [...attendanceRecords].filter(r => r.studentId === student.id).reverse().slice(0, 10).map((record, index) => {
@@ -891,12 +741,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                     <p className="text-gray-500 text-[10px] font-bold mt-0.5">{lectureInfo?.date} | {new Date(record.timestamp).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: 'numeric', hour12: true })}</p>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-1">
-                                                    <span className="flex items-center text-green-400 text-xs font-black">
-                                                        <CheckCircleIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 me-1"/> حاضر
-                                                    </span>
-                                                    {record.isOutsideRadius && (
-                                                        <span className="text-[8px] font-black text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">خارج النطاق</span>
-                                                    )}
+                                                    <span className="flex items-center text-green-400 text-xs font-black"><CheckCircleIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 me-1"/> حاضر</span>
+                                                    {record.isOutsideRadius && <span className="text-[8px] font-black text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">خارج النطاق</span>}
                                                 </div>
                                             </div>
                                         )
@@ -908,16 +754,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         </div>
 
                         <div className="mt-12 sm:mt-16 animate-slide-in-up" style={{ animationDelay: '300ms' }}>
-                            <h2 className="text-lg sm:text-xl font-black text-white mb-4 sm:mb-6 flex items-center gap-2">
-                                <span className="w-1.5 h-5 sm:h-6 bg-red-500 rounded-full"></span>
-                                سجل الغيابات
-                            </h2>
-                            
+                            <h2 className="text-lg sm:text-xl font-black text-white mb-4 sm:mb-6 flex items-center gap-2"><span className="w-1.5 h-5 sm:h-6 bg-red-500 rounded-full"></span>سجل الغيابات</h2>
                             <div className="bg-red-500/5 border border-red-500/10 rounded-2xl sm:rounded-[1.5rem] p-4 sm:p-6 mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-inner gap-4 sm:gap-0">
                                 <div className="flex items-center">
-                                    <div className="bg-red-500/10 p-2 sm:p-3 rounded-xl sm:rounded-2xl mr-3 sm:mr-4">
-                                        <AlertTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
-                                    </div>
+                                    <div className="bg-red-500/10 p-2 sm:p-3 rounded-xl sm:rounded-2xl mr-3 sm:mr-4"><AlertTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" /></div>
                                     <div>
                                         <h3 className="font-black text-red-500 text-base sm:text-lg">إجمالي الغيابات</h3>
                                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">عدد المحاضرات التي لم يتم تسجيل حضورك بها.</p>
@@ -929,18 +769,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <div className="text-3xl sm:text-4xl font-black text-red-500">{missedLectures.length}</div>
                                     </div>
                                     {absencePercentageEnabled && (
-                                        <>
-                                            <div className="w-px h-12 bg-red-500/20"></div>
-                                            <div className="text-center">
-                                                <p className="text-[10px] text-red-500/70 font-bold mb-1">النسبة التقريبية</p>
-                                                <div className="text-3xl sm:text-4xl font-black text-red-500">
-                                                    {missedLectures.reduce((total, lecture) => {
-                                                        const course = courses.find(c => c.id === lecture.courseId);
-                                                        return total + (course?.absenceWeight ?? 2.5);
-                                                    }, 0).toFixed(1)}%
-                                                </div>
-                                            </div>
-                                        </>
+                                        <><div className="w-px h-12 bg-red-500/20"></div><div className="text-center"><p className="text-[10px] text-red-500/70 font-bold mb-1">النسبة التقريبية</p><div className="text-3xl sm:text-4xl font-black text-red-500">{missedLectures.reduce((total, lecture) => { const course = courses.find(c => c.id === lecture.courseId); return total + (course?.absenceWeight ?? 2.5); }, 0).toFixed(1)}%</div></div></>
                                     )}
                                 </div>
                             </div>
@@ -967,12 +796,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             )}
 
             {/* 💡 تبويبة المجموعات الصارمة الصلاحيات */}
-            {activeTab === 'group' && (
+            {activeTab === 'group' && (student?.isLeader || isBatchAdmin) && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 animate-slide-in-up">
                     <div className="lg:col-span-2 space-y-6">
                         <div className={`backdrop-blur-2xl border rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-10 shadow-2xl transition-all duration-500 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
                             
-                            {/* 1. واجهة مشرف الدفعة لعرض جميع المجموعات */}
+                            {/* 1. واجهة ليدر الدفعة لعرض جميع المجموعات */}
                             {isBatchAdmin && !managementSelectedGroupId ? (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -984,23 +813,41 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         </button>
                                     </div>
                                     
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
                                         {groups?.map((group) => {
-                                            const mCount = allStudents.filter(s => s.groupId === group.id).length;
+                                            const members = allStudents.filter(s => s.groupId === group.id);
                                             return (
-                                                <div key={group.id} className="p-5 bg-slate-800/40 hover:bg-slate-800/60 rounded-2xl border border-slate-700/50 flex flex-col gap-4 transition-all transform-gpu">
-                                                    <div className="flex justify-between items-start">
-                                                        <h3 className={`font-bold text-lg ${isRamadanMode ? 'text-yellow-400' : 'text-white'}`}>{group.name}</h3>
-                                                        <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold">{mCount} أعضاء</span>
+                                                <div key={group.id} className={`p-6 bg-slate-800/40 hover:bg-slate-800/60 rounded-[2rem] border border-slate-700/50 flex flex-col transition-all transform-gpu`}>
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="flex flex-col">
+                                                            <h3 className={`font-black text-xl ${isRamadanMode ? 'text-yellow-400' : 'text-white'}`}>{group.name}</h3>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold">{members.length} طلاب</span>
+                                                            <button onClick={() => { setEditGroupName(group.name); setManagementSelectedGroupId(group.id); setEditGroupNameModalOpen(true); }} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all" title="تعديل الاسم"><EditIcon className="w-4 h-4" /></button>
+                                                            <button onClick={() => { if (onDeleteGroupLocal) onDeleteGroupLocal(group.id); }} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-all" title="حذف المجموعة"><TrashIcon className="w-4 h-4" /></button>
+                                                        </div>
                                                     </div>
-                                                    <button onClick={() => setManagementSelectedGroupId(group.id)} className="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-                                                        <EditIcon className="w-4 h-4" /> الدخول وإدارة المجموعة
-                                                    </button>
+                                                    
+                                                    <div className="space-y-2 mt-2">
+                                                        <button onClick={() => setManagementSelectedGroupId(group.id)} className="w-full py-3 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 text-purple-400 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                                                            <ClipboardListIcon className="w-4 h-4" /> استعراض وتحضير المجموعة
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="mt-6 flex -space-x-2 rtl:space-x-reverse">
+                                                        {members.slice(0, 5).map(m => (
+                                                            <div key={m.id} className="w-10 h-10 rounded-full border-2 border-slate-900 bg-slate-700 flex items-center justify-center text-xs font-bold text-white" title={m.name}>{m.name[0]}</div>
+                                                        ))}
+                                                        {members.length > 5 && (
+                                                            <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] text-gray-400">+{members.length - 5}</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             );
                                         })}
                                         {(!groups || groups.length === 0) && (
-                                            <div className="col-span-full text-center py-10 bg-slate-800/20 rounded-2xl border border-dashed border-slate-700 text-gray-500">
+                                            <div className="col-span-full text-center py-10 bg-slate-800/20 rounded-2xl border border-dashed border-slate-700 text-gray-500 font-bold">
                                                 لا توجد مجموعات في الدفعة حالياً. قم بإنشاء أول مجموعة!
                                             </div>
                                         )}
@@ -1008,16 +855,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 </div>
 
                             ) : (!activeGroupId ? (
-                                // 2. واجهة الطالب العادي الذي لا يملك مجموعة
+                                // 2. واجهة الطالب القائد الذي فقد مجموعته
                                 <div className="text-center py-8 sm:py-10 animate-fade-in">
                                     <UsersIcon className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-gray-500 mb-4" />
                                     <h2 className={`text-xl sm:text-2xl font-black mb-4 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>لست منضماً لأي مجموعة</h2>
                                     <p className="text-gray-400 mb-6 text-sm sm:text-base">
-                                        يرجى التواصل مع رئيس الدفعة لإضافتك إلى مجموعة.
+                                        يرجى التواصل مع رئيس الدفعة لتعيينك في مجموعة.
                                     </p>
                                 </div>
                             ) : (
-                                // 3. واجهة عرض المجموعة المحددة
+                                // 3. واجهة عرض المجموعة المحددة 
                                 <div className="animate-fade-in">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-10">
                                         <div className="flex flex-col items-start gap-2 w-full sm:w-auto">
@@ -1033,7 +880,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                                             
                                             {/* 💡 التصدير: متاح لليدر الدفعة وقائد المجموعة */}
-                                            {(student?.isLeader || isBatchAdmin) && selectedLectureId && (
+                                            {selectedLectureId && (
                                                 <button onClick={handleGroupExportPdf} disabled={isGroupExportingPdf} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu shadow-lg disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'}`}>
                                                     {isGroupExportingPdf ? 'جاري التصدير...' : 'تصدير PDF للمجموعة'}
                                                 </button>
@@ -1050,39 +897,26 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                     </button>
                                                 </>
                                             )}
-
-                                            {/* 💡 زر المغادرة للعضو الفعلي فقط */}
-                                            {student?.groupId === activeGroupId && (
-                                                <button onClick={() => {
-                                                    if (confirm('هل أنت متأكد من مغادرة المجموعة؟')) {
-                                                        onUpdateStudent(student.id, { groupId: undefined, groupName: undefined, isLeader: false });
-                                                    }
-                                                }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
-                                                    مغادرة
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
 
-                                    {(student?.isLeader || isBatchAdmin) && (
-                                        <div className="mb-6 w-full sm:w-64">
-                                            <select 
-                                                value={selectedLectureId || ''}
-                                                onChange={(e) => setSelectedLectureId(e.target.value)}
-                                                className="block w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 text-xs sm:text-sm bg-slate-800 border-slate-700 text-white transition-all"
-                                            >
-                                                {lectures.length === 0 ? (
-                                                    <option value="">لا توجد محاضرات</option>
-                                                ) : (
-                                                    lectures.map(lecture => (
-                                                        <option key={lecture.qrCode} value={lecture.qrCode}>
-                                                            {lecture.courseName} | {lecture.date}
-                                                        </option>
-                                                    ))
-                                                )}
-                                            </select>
-                                        </div>
-                                    )}
+                                    <div className="mb-6 w-full sm:w-64">
+                                        <select 
+                                            value={selectedLectureId || ''}
+                                            onChange={(e) => setSelectedLectureId(e.target.value)}
+                                            className="block w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 text-xs sm:text-sm bg-slate-800 border-slate-700 text-white transition-all"
+                                        >
+                                            {lectures.length === 0 ? (
+                                                <option value="">لا توجد محاضرات</option>
+                                            ) : (
+                                                lectures.map(lecture => (
+                                                    <option key={lecture.qrCode} value={lecture.qrCode}>
+                                                        {lecture.courseName} | {lecture.date}
+                                                    </option>
+                                                ))
+                                            )}
+                                        </select>
+                                    </div>
 
                                     <div className="space-y-3 sm:space-y-4">
                                         {groupMembers.length > 0 ? groupMembers.map((member, index) => {
@@ -1134,8 +968,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                 </button>
                                                             )}
                                                             
-                                                            {/* 💡 التحضير والغياب: متاح لليدر الدفعة وقائد المجموعة */}
-                                                            {selectedLectureId && (student?.isLeader || isBatchAdmin) && (
+                                                            {/* 💡 التحضير والغياب: متاح للجميع داخل هذه التبويبة */}
+                                                            {selectedLectureId && (
                                                                 isPresent ? (
                                                                     <button onClick={() => onRemoveAttendance(member.id, actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                         <XCircleIcon className="w-3.5 h-3.5"/> غياب
@@ -1183,12 +1017,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             <UsersIcon className="w-4 h-4" /> <span className="hidden sm:inline">إنشاء مجموعة</span>
                                         </button>
                                         <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                                <path d="M3 3v5h5" />
-                                                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                                                <path d="M16 21v-5h5" />
-                                            </svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 21v-5h5" /></svg>
                                             <span className="hidden sm:inline">مسح التحضير</span>
                                         </button>
                                         <button onClick={() => setRepeatModalOpen(true)} disabled={!managementSelectedLectureId} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-purple-500/20 text-purple-500 hover:bg-purple-500/30' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
@@ -1206,22 +1035,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 <div className="flex flex-wrap gap-4 mb-8">
                                     <div className="flex-1 min-w-[150px]">
                                         <label className="block text-[10px] font-black text-gray-500 uppercase mb-2 mr-1">تاريخ اليوم</label>
-                                        <select 
-                                            value={selectedDateFilter} 
-                                            onChange={(e) => setSelectedDateFilter(e.target.value)}
-                                            className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu"
-                                        >
+                                        <select value={selectedDateFilter} onChange={(e) => setSelectedDateFilter(e.target.value)} className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu">
                                             {uniqueLectureDates.map(date => <option key={date} value={date}>{date}</option>)}
                                             {uniqueLectureDates.length === 0 && <option value="">لا توجد تواريخ</option>}
                                         </select>
                                     </div>
                                     <div className="flex-1 min-w-[200px]">
                                         <label className="block text-[10px] font-black text-gray-500 uppercase mb-2 mr-1">اختر المحاضرة</label>
-                                        <select 
-                                            value={managementSelectedLectureId || ''} 
-                                            onChange={(e) => setManagementSelectedLectureId(e.target.value)}
-                                            className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu"
-                                        >
+                                        <select value={managementSelectedLectureId || ''} onChange={(e) => setManagementSelectedLectureId(e.target.value)} className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu">
                                             {filteredLectures.map(l => <option key={l.qrCode} value={l.qrCode}>{l.courseName} ({l.timeSlot})</option>)}
                                             {filteredLectures.length === 0 && <option value="">لا توجد محاضرات</option>}
                                         </select>
@@ -1234,39 +1055,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="bg-slate-700/50 text-gray-300 font-mono text-xs font-black px-2 py-1 rounded-lg border border-slate-600/50 shadow-sm">
-                                                            #{s.serialNumber}
-                                                        </span>
+                                                        <span className="bg-slate-700/50 text-gray-300 font-mono text-xs font-black px-2 py-1 rounded-lg border border-slate-600/50 shadow-sm">#{s.serialNumber}</span>
                                                         <p className="text-white font-bold text-lg">{s.name}</p>
                                                     </div>
                                                     <p className="text-gray-400 text-xs font-mono">ID: {s.universityId}</p>
                                                 </div>
-                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                                    s.status === 'حاضر' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                                }`}>
-                                                    {s.status}
-                                                </span>
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${s.status === 'حاضر' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>{s.status}</span>
                                             </div>
                                             <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                                                <span className="text-xs text-gray-500">
-                                                    {s.record ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                                                </span>
+                                                <span className="text-xs text-gray-500">{s.record ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                                                 {s.actualLectureId && (
                                                     s.status === 'حاضر' ? (
-                                                        <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
-                                                            <XCircleIcon className="w-4 h-4"/> غياب
-                                                        </button>
+                                                        <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu"><XCircleIcon className="w-4 h-4"/> غياب</button>
                                                     ) : (
-                                                        <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
-                                                            <CheckCircleIcon className="w-4 h-4"/> تحضير
-                                                        </button>
+                                                        <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu"><CheckCircleIcon className="w-4 h-4"/> تحضير</button>
                                                     )
                                                 )}
                                             </div>
                                         </div>
-                                    )) : (
-                                        <div className="text-center py-12 text-gray-500 italic">لا توجد بيانات لعرضها.</div>
-                                    )}
+                                    )) : (<div className="text-center py-12 text-gray-500 italic">لا توجد بيانات لعرضها.</div>)}
                                 </div>
 
                                 <div className="hidden sm:block overflow-x-auto rounded-3xl border border-slate-800 mt-8">
@@ -1286,34 +1093,22 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                     <td className="px-6 py-4 font-mono text-gray-500">{s.serialNumber}</td>
                                                     <td className="px-6 py-4 font-bold text-white">{s.name}</td>
                                                     <td className="px-6 py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                                            s.status === 'حاضر' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                                        }`}>
-                                                            {s.status}
-                                                        </span>
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${s.status === 'حاضر' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>{s.status}</span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {s.actualLectureId && (
                                                             s.status === 'حاضر' ? (
-                                                                <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
-                                                                    <XCircleIcon className="w-3.5 h-3.5"/> غياب
-                                                                </button>
+                                                                <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90"><XCircleIcon className="w-3.5 h-3.5"/> غياب</button>
                                                             ) : (
-                                                                <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
-                                                                    <CheckCircleIcon className="w-3.5 h-3.5"/> تحضير
-                                                                </button>
+                                                                <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90"><CheckCircleIcon className="w-3.5 h-3.5"/> تحضير</button>
                                                             )
                                                         )}
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">
-                                                        {s.record ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                                                    </td>
+                                                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">{s.record ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                                                 </tr>
                                             ))}
                                             {managementAttendanceData.length === 0 && (
-                                                <tr>
-                                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">لا توجد بيانات لعرضها.</td>
-                                                </tr>
+                                                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">لا توجد بيانات لعرضها.</td></tr>
                                             )}
                                         </tbody>
                                     </table>
@@ -1328,28 +1123,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             )}
 
             <Modal isOpen={isScannerOpen && activeLecture !== null} onClose={() => setScannerOpen(false)} title={`مسح: ${activeLecture?.courseName}`} isRamadanMode={isRamadanMode}>
-                 {activeLecture && (
-                     <QRCodeScanner 
-                         onScanSuccess={handleScanSuccess}
-                         onClose={() => setScannerOpen(false)}
-                         qrToMatch={activeLecture.qrCode}
-                         isRamadanMode={isRamadanMode}
-                     />
-                 )}
+                 {activeLecture && <QRCodeScanner onScanSuccess={handleScanSuccess} onClose={() => setScannerOpen(false)} qrToMatch={activeLecture.qrCode} isRamadanMode={isRamadanMode} />}
             </Modal>
 
             <Modal isOpen={isCreateGroupModalOpen} onClose={() => setCreateGroupModalOpen(false)} title="إنشاء مجموعة جديدة" isRamadanMode={isRamadanMode}>
                 <form onSubmit={handleCreateGroup} className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-400 px-1">اسم المجموعة</label>
-                        <input 
-                            type="text" 
-                            value={newGroupName} 
-                            onChange={(e) => setNewGroupName(e.target.value)} 
-                            required 
-                            className={`w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:outline-none ${isRamadanMode ? 'focus:border-yellow-500' : 'focus:border-blue-500'}`} 
-                            placeholder="مثال: مجموعة أ"
-                        />
+                        <input type="text" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} required className={`w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:outline-none ${isRamadanMode ? 'focus:border-yellow-500' : 'focus:border-blue-500'}`} placeholder="مثال: مجموعة أ" />
                     </div>
                     <div className="pt-4 flex gap-3">
                         <button type="button" onClick={() => setCreateGroupModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
@@ -1362,39 +1143,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <form onSubmit={handleAddMembers} className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-400 px-1">البحث عن طلاب</label>
-                        <input 
-                            type="text" 
-                            value={studentSearchQuery} 
-                            onChange={(e) => setStudentSearchQuery(e.target.value)}
-                            className="w-full px-4 py-2 text-sm border-2 rounded-xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none mb-3"
-                            placeholder="بحث بالاسم أو الرقم الجامعي..."
-                        />
+                        <input type="text" value={studentSearchQuery} onChange={(e) => setStudentSearchQuery(e.target.value)} className="w-full px-4 py-2 text-sm border-2 rounded-xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none mb-3" placeholder="بحث بالاسم أو الرقم الجامعي..." />
                         <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                            {allStudents
-                                .filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery)))
-                                .map(s => (
-                                    <div key={s.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                                        <div>
-                                            <p className="text-white font-bold text-sm">{s.name}</p>
-                                            <p className="text-gray-500 text-xs">{s.universityId}</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const newSet = new Set(selectedMemberIds);
-                                                if (newSet.has(s.id)) newSet.delete(s.id);
-                                                else newSet.add(s.id);
-                                                setSelectedMemberIds(newSet);
-                                            }}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all transform-gpu ${selectedMemberIds.has(s.id) ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}
-                                        >
-                                            {selectedMemberIds.has(s.id) ? 'محدد' : 'تحديد'}
-                                        </button>
-                                    </div>
-                                ))}
-                            {allStudents.filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).length === 0 && (
-                                <div className="text-center py-4 text-gray-500 text-sm">لا يوجد طلاب متاحين للبحث</div>
-                            )}
+                            {allStudents.filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).map(s => (
+                                <div key={s.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                                    <div><p className="text-white font-bold text-sm">{s.name}</p><p className="text-gray-500 text-xs">{s.universityId}</p></div>
+                                    <button type="button" onClick={() => { const newSet = new Set(selectedMemberIds); if (newSet.has(s.id)) newSet.delete(s.id); else newSet.add(s.id); setSelectedMemberIds(newSet); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all transform-gpu ${selectedMemberIds.has(s.id) ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}>{selectedMemberIds.has(s.id) ? 'محدد' : 'تحديد'}</button>
+                                </div>
+                            ))}
+                            {allStudents.filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).length === 0 && <div className="text-center py-4 text-gray-500 text-sm">لا يوجد طلاب متاحين للبحث</div>}
                         </div>
                     </div>
                     <div className="pt-4 flex gap-3">
@@ -1408,14 +1165,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <form onSubmit={handleUpdateGroupName} className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-400 px-1">اسم المجموعة الجديد</label>
-                        <input 
-                            type="text" 
-                            value={editGroupName} 
-                            onChange={(e) => setEditGroupName(e.target.value)} 
-                            required 
-                            className={`w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:outline-none ${isRamadanMode ? 'focus:border-yellow-500' : 'focus:border-blue-500'}`} 
-                            placeholder="اسم المجموعة"
-                        />
+                        <input type="text" value={editGroupName} onChange={(e) => setEditGroupName(e.target.value)} required className={`w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:outline-none ${isRamadanMode ? 'focus:border-yellow-500' : 'focus:border-blue-500'}`} placeholder="اسم المجموعة" />
                     </div>
                     <div className="pt-4 flex gap-3">
                         <button type="button" onClick={() => setEditGroupNameModalOpen(false)} className="flex-1 px-6 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all transform-gpu">إلغاء</button>
@@ -1428,12 +1178,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <form onSubmit={handleQrFormSubmit} className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-400 px-1">المقرر</label>
-                        <select 
-                            value={selectedCourseId} 
-                            onChange={(e) => setSelectedCourseId(e.target.value)} 
-                            disabled={isCreatingQr} 
-                            className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50"
-                        >
+                        <select value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)} disabled={isCreatingQr} className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50">
                             <option value="">اختر المقرر</option>
                             {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
@@ -1442,15 +1187,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-400 px-1">اسم المحاضرة (اختياري)</label>
-                        <input 
-                            type="text" 
-                            value={qrForm.lectureName} 
-                            onChange={(e) => setQrForm(p => ({...p, lectureName: e.target.value}))} 
-                            disabled={isCreatingQr} 
-                            placeholder="مثال: محاضرة 1 - مقدمة"
-                            className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50"
-                        />
-                        <p className="text-[10px] text-gray-500 px-1">إذا تركته فارغاً، سيتم تسميتها تلقائياً (مثال: اسم المقرر - محاضرة 1)</p>
+                        <input type="text" value={qrForm.lectureName} onChange={(e) => setQrForm(p => ({...p, lectureName: e.target.value}))} disabled={isCreatingQr} placeholder="مثال: محاضرة 1 - مقدمة" className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+                        <p className="text-[10px] text-gray-500 px-1">إذا تركته فارغاً، سيتم تسميتها تلقائياً</p>
                     </div>
 
                     <div className="space-y-2">
@@ -1461,51 +1199,19 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-400 px-1">وقت البداية</label>
-                            <input 
-                                type="time" 
-                                value={qrForm.startTime} 
-                                onChange={handleStartTimeChange} 
-                                required 
-                                disabled={isCreatingQr} 
-                                className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 appearance-none text-center font-bold font-mono"
-                            />
+                            <input type="time" value={qrForm.startTime} onChange={handleStartTimeChange} required disabled={isCreatingQr} className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 appearance-none text-center font-bold font-mono" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-400 px-1">وقت النهاية</label>
-                            <input 
-                                type="time" 
-                                value={qrForm.endTime} 
-                                onChange={(e) => setQrForm(p => ({...p, endTime: e.target.value}))} 
-                                required 
-                                disabled={isCreatingQr} 
-                                className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 appearance-none text-center font-bold font-mono"
-                            />
+                            <input type="time" value={qrForm.endTime} onChange={(e) => setQrForm(p => ({...p, endTime: e.target.value}))} required disabled={isCreatingQr} className="w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none disabled:opacity-50 appearance-none text-center font-bold font-mono" />
                         </div>
                     </div>
 
-                    {qrError && (
-                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl text-sm font-bold text-center animate-fade-in">
-                            {qrError}
-                        </div>
-                    )}
+                    {qrError && <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl text-sm font-bold text-center animate-fade-in">{qrError}</div>}
 
                     <div className="flex flex-col gap-3 pt-4 border-t border-slate-700/50 mt-2">
-                        <button 
-                            type="submit" 
-                            name="qrBtn"
-                            disabled={isCreatingQr || !selectedCourseId} 
-                            className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-green-600/20 disabled:opacity-50"
-                        >
-                            {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور بالباركود'}
-                        </button>
-                        <button 
-                            type="submit" 
-                            name="manualBtn"
-                            disabled={isCreatingQr || !selectedCourseId} 
-                            className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-purple-600/20 disabled:opacity-50"
-                        >
-                            {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور'}
-                        </button>
+                        <button type="submit" name="qrBtn" disabled={isCreatingQr || !selectedCourseId} className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-green-600/20 disabled:opacity-50">{isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور بالباركود'}</button>
+                        <button type="submit" name="manualBtn" disabled={isCreatingQr || !selectedCourseId} className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all transform-gpu shadow-lg shadow-purple-600/20 disabled:opacity-50">{isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور'}</button>
                     </div>
                 </form>
             </Modal>
@@ -1525,16 +1231,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="text-center p-4">
                     <CopyIcon className="mx-auto h-16 w-16 text-purple-500 mb-4" />
                     <p className="text-gray-300 font-bold mb-4">سيتم نسخ حضور المحاضرة السابقة لنفس المقرر وإضافته لهذه المحاضرة.</p>
-                    {repeatStatus && (
-                        <div className={`p-3 rounded-xl mb-4 font-bold ${repeatStatus.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                            {repeatStatus.message}
-                        </div>
-                    )}
+                    {repeatStatus && <div className={`p-3 rounded-xl mb-4 font-bold ${repeatStatus.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{repeatStatus.message}</div>}
                     <div className="flex gap-3">
                         <button onClick={() => setRepeatModalOpen(false)} disabled={isRepeating} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold disabled:opacity-50 transition-all transform-gpu">إلغاء</button>
-                        <button onClick={handleConfirmRepeat} disabled={isRepeating} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white font-bold transition-all transform-gpu disabled:opacity-50">
-                            {isRepeating ? 'جاري التكرار...' : 'تأكيد التكرار'}
-                        </button>
+                        <button onClick={handleConfirmRepeat} disabled={isRepeating} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white font-bold transition-all transform-gpu disabled:opacity-50">{isRepeating ? 'جاري التكرار...' : 'تأكيد التكرار'}</button>
                     </div>
                 </div>
             </Modal>
@@ -1543,7 +1243,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="text-center p-4">
                     <TrashIcon className="mx-auto h-16 w-16 text-red-500 mb-4" />
                     <p className="text-gray-300 font-bold">هل أنت متأكد من مسح جميع سجلات حضور الطلاب <span className="text-red-400">لهذه المحاضرة فقط</span>؟</p>
-                    <p className="text-gray-500 text-xs mt-2">المحاضرة ستبقى موجودة، ولكن سيتم تصفير التحضير.</p>
                     <div className="mt-8 flex gap-3">
                         <button onClick={() => setClearAttendanceModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
                         <button onClick={() => { if(managementSelectedLectureId) onClearLectureAttendance(managementSelectedLectureId); setClearAttendanceModalOpen(false); }} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">تأكيد المسح</button>

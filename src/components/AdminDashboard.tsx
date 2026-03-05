@@ -28,6 +28,7 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
+import toast from 'react-hot-toast';
 
 interface AdminDashboardProps {
     students: Student[];
@@ -66,7 +67,7 @@ interface AdminDashboardProps {
     locationRestrictionEnabled: boolean; 
     onToggleLocationRestriction: (enabled: boolean) => void; 
     onClearLectureAttendance: (lectureId: string) => void;
-    onDeleteGroupLocal: any;
+    onDeleteGroupLocal: any; // 👈 تمرير دالة حذف المجموعة
 }
 
 const formatTimeToArabic = (time24: string) => {
@@ -83,7 +84,7 @@ const formatTimeToArabic = (time24: string) => {
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const { 
         students, groups, attendanceRecords, lectures, batches, setBatches, onAddStudent, onUpdateStudent, onUpdateGroupName,
-        onAddGroupLocal, onDeleteAllGroupsLocal,
+        onAddGroupLocal, onDeleteAllGroupsLocal, onDeleteGroupLocal,
         onGenerateQrCode, onManualAttendance, onRemoveAttendance, onResetStudentDevice,
         onResetAllDevices, onRepeatPreviousAttendance, onDeleteLecture, onDeleteStudent,
         deviceBindingEnabled, onToggleDeviceBinding, absencePercentageEnabled, onToggleAbsencePercentage, onClearAllAttendance, onClearAllLectures, isRamadanMode,
@@ -225,7 +226,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         startTime: '08:00', 
         endTime: '09:00', 
         lectureName: '',
-        isManual: false // 👈 الحقل الجديد
+        isManual: false 
     });
     
     const [selectedDateFilter, setSelectedDateFilter] = useState<string>('');
@@ -321,7 +322,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         };
     }, [students, lectures, attendanceRecords, courses]);
 
-    // 💡 جلب آخر مقرر تم اختياره، وحفظ أي تغيير جديد
     useEffect(() => {
         if (courses.length > 0 && !selectedCourseId) {
             const savedCourseId = localStorage.getItem('lastSelectedCourseId');
@@ -352,7 +352,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const handleQrFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // 💡 قراءة أي زر تم الضغط عليه للتو
         const isManualMode = (e.nativeEvent as any).submitter?.name === 'manualBtn';
 
         if (!selectedBatchId) {
@@ -381,7 +380,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             courseName: finalLectureName,
             courseId: selectedCourse.id,
             batchId: selectedBatchId,
-            isManual: isManualMode // 👈 نمرر القيمة هنا مباشرة
+            isManual: isManualMode
         };
 
         onGenerateQrCode(details, {
@@ -391,10 +390,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                 setIsCreatingQr(false);
                 setQrForm(p => ({ ...p, lectureName: '' }));
                 
-                // 💡 التعديلات الجديدة للانتقال التلقائي:
-                setSelectedDateFilter(qrForm.date); // التبديل لتاريخ المحاضرة الجديدة
-                setSelectedLectureId(null); // تصفير الاختيار يجبر النظام على التقاط أحدث محاضرة تلقائياً
-                setActiveTab('attendance'); // فتح تبويب الحضور فوراً
+                setSelectedDateFilter(qrForm.date); 
+                setSelectedLectureId(null); 
+                setActiveTab('attendance'); 
             },
             onError: (message: string) => {
                 setIsCreatingQr(false);
@@ -1914,24 +1912,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                             const leader = members.find(s => s.isLeader);
                                             return (
                                                 <div key={group.id} className={`backdrop-blur-xl border p-6 rounded-[2rem] transition-all duration-300 transform-gpu group ${isRamadanMode ? 'ramadan-card hover:border-yellow-500/40' : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600'}`}>
+                                                    
+                                                    {/* 💡 تعديل الواجهة للمشرف لتعرض زر التعديل والحذف */}
                                                     <div className="flex justify-between items-start mb-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <h3 className={`text-xl font-black mb-1 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>{group.name}</h3>
-                                                            <button onClick={() => handleOpenEditGroupModal(group)} className={`flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20' : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'}`}>
-                                                                <EditIcon className="w-3 h-3" />
-                                                                <span>تعديل</span>
-                                                            </button>
+                                                        <h3 className={`text-xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>{group.name}</h3>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-500/10 text-blue-400">{members.length} طلاب</span>
+                                                            <button onClick={() => { setGroupToEdit(group); setGroupName(group.name); setSelectedGroupStudentIds(new Set(members.map(s => s.id))); setEditGroupModalOpen(true); }} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-all" title="تعديل"><EditIcon className="w-4 h-4" /></button>
+                                                            <button onClick={() => onDeleteGroupLocal(group.id)} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-all" title="حذف المجموعة"><TrashIcon className="w-4 h-4" /></button>
                                                         </div>
-                                                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${isRamadanMode ? 'ramadan-badge-gold' : 'bg-blue-500/10 text-blue-400'}`}>{members.length} طلاب</span>
                                                     </div>
+
                                                     <div className="space-y-2 mt-4">
-                                                        {/* 💡 الزر الجديد للانتقال للتحضير وعرض هذه المجموعة فقط */}
                                                         <button 
                                                             onClick={() => { 
                                                                 if(selectedBatchId) { 
                                                                     onChangeBatch(selectedBatchId); 
-                                                                    setAttendanceGroupFilter(group.id); // تعيين الفلتر برقم المجموعة
-                                                                    setActiveTab('attendance'); // الانتقال للتحضير
+                                                                    setAttendanceGroupFilter(group.id); 
+                                                                    setActiveTab('attendance'); 
                                                                 } 
                                                             }}
                                                             className="w-full flex items-center justify-center gap-2 text-sm font-bold text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-colors p-3 rounded-xl border border-purple-500/20"
@@ -2142,7 +2140,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         </div>
                     </div>
 
-                    {/* 💡 زرين منفصلين ومصممين بشكل فخم */}
                     <div className="flex flex-col gap-3 pt-4 border-t border-slate-700/50 mt-2">
                         <button 
                             type="submit" 

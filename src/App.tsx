@@ -4,7 +4,7 @@ import { UserRole } from './types';
 import { login as apiLogin } from './services/api';
 import { supabase } from './services/supabaseClient';
 import Login from './components/Login';
-// 💡 استيراد كسول (Lazy Import): لا تحمل الملف إلا عند الحاجة إليه
+
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 const StudentDashboard = React.lazy(() => import('./components/StudentDashboard'));
 import { LogOutIcon, LogoIcon, AlertTriangleIcon } from './components/icons';
@@ -13,7 +13,6 @@ import { useSession } from './hooks/useSession';
 import { AppProvider, useAppState } from './contexts/AppContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// 💡 مكون التحميل الوهمي (Skeleton) الفخم
 const DashboardSkeleton = ({ isRamadanMode }: { isRamadanMode: boolean }) => (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-pulse space-y-8 w-full">
         <div className="flex justify-between items-center mb-8">
@@ -38,7 +37,7 @@ function AppContent() {
         selectedBatchId, isLoading, isRamadanMode, selectBatch, batches, students, groups, attendance, lectures, courses,
         deviceBindingEnabled, absencePercentageEnabled, locationRestrictionEnabled,
         filteredStudents, filteredLectures, filteredAttendance, activeLecture, studentCourses, currentBatch,
-        setBatches, setCourses, addStudent, updateStudent, updateGroupName, addGroupLocal, deleteAllGroupsLocal,
+        setBatches, setCourses, addStudent, updateStudent, updateGroupName, addGroupLocal, deleteGroupLocal, deleteAllGroupsLocal,
         generateQrCode, manualAttendance, removeAttendance, resetStudentDevice, resetAllDevices, repeatPreviousAttendance,
         deleteLecture, deleteStudent, toggleDeviceBinding, toggleAbsencePercentage, toggleLocationRestriction,
         clearLectureAttendance, clearAllAttendance, clearAllLectures, recalculateSerials, refreshStudents, recordAttendance, toggleRamadanMode
@@ -80,7 +79,6 @@ function AppContent() {
 
     const handleResetBatch = () => { selectBatch(null); };
 
-    // 💡 استخدام التحميل الوهمي بدلاً من الشاشة البيضاء المملة
     if (isLoading || sessionLoading) {
         return (
             <div className={`min-h-screen flex flex-col transition-colors duration-700 transform-gpu ${isRamadanMode ? 'ramadan-theme' : 'bg-slate-950'}`}>
@@ -129,7 +127,6 @@ function AppContent() {
 
     return (
         <div className={`min-h-screen text-gray-100 transition-colors duration-700 ${isRamadanMode ? 'ramadan-theme' : ''}`}>
-            {/* 💡 إعدادات الإشعارات (Toaster) */}
             <Toaster 
                 position="top-center" 
                 toastOptions={{
@@ -178,14 +175,13 @@ function AppContent() {
                 </header>
             )}
             <main>
-                {/* 💡 تعليق العرض حتى يتم تحميل اللوحة المطلوبة فقط، وإظهار التحميل الوهمي في الانتظار */}
                 <React.Suspense fallback={<DashboardSkeleton isRamadanMode={isRamadanMode} />}>
                     {currentUser.role === UserRole.Admin ? (
                         <AdminDashboard 
                             batches={batches || []} setBatches={setBatches} students={safeStudents} groups={safeGroups}
                             attendanceRecords={safeAttendanceRecords} lectures={safeLectures} courses={safeCourses} setCourses={setCourses}
                             onAddStudent={addStudent} onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName}
-                            onAddGroupLocal={addGroupLocal} onDeleteAllGroupsLocal={deleteAllGroupsLocal}
+                            onAddGroupLocal={addGroupLocal} onDeleteGroupLocal={deleteGroupLocal} onDeleteAllGroupsLocal={deleteAllGroupsLocal}
                             onGenerateQrCode={generateQrCode} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
                             onResetStudentDevice={resetStudentDevice} onResetAllDevices={resetAllDevices}
                             onRepeatPreviousAttendance={repeatPreviousAttendance} onDeleteLecture={deleteLecture} onDeleteStudent={deleteStudent}
@@ -195,7 +191,6 @@ function AppContent() {
                             onClearLectureAttendance={clearLectureAttendance} onClearAllAttendance={clearAllAttendance} onClearAllLectures={clearAllLectures}
                             isRamadanMode={isRamadanMode} selectedBatchId={selectedBatchId} onResetBatch={handleResetBatch} onChangeBatch={selectBatch}
                             onRecalculateSerials={recalculateSerials} onRefreshStudents={refreshStudents}
-                            onDeleteGroupLocal={deleteGroupLocal}
                         />
                     ) : (
                         <StudentDashboard 
@@ -203,13 +198,11 @@ function AppContent() {
                             allStudents={safeStudents} attendanceRecords={safeAttendanceRecords}
                             groups={safeGroups}
                             onRecordAttendance={recordAttendance} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
-                            onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal}
+                            onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal} onDeleteGroupLocal={deleteGroupLocal}
                             activeLecture={activeLecture} lectures={safeLectures} courses={safeStudentCourses}
                             onGenerateQrCode={generateQrCode} onDeleteLecture={deleteLecture}
                             onRepeatPreviousAttendance={repeatPreviousAttendance} onClearLectureAttendance={clearLectureAttendance}
                             absencePercentageEnabled={absencePercentageEnabled} isRamadanMode={isRamadanMode}
-                            groups={safeGroups}
-                            onDeleteGroupLocal={deleteGroupLocal}
                         />
                     )}
                 </React.Suspense>
