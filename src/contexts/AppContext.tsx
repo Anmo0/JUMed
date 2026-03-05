@@ -88,7 +88,7 @@ interface AppContextType extends AppState {
   deleteAllGroupsLocal: () => void;
   
   generateQrCode: (
-    details: { date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string },
+    details: { date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string, isManual?: boolean },
     callbacks: { onSuccess: () => void, onError: (message: string) => void }
   ) => void;
   deleteLecture: (lectureId: string) => Promise<void>;
@@ -461,7 +461,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [updateState]);
 
   const generateQrCode = useCallback((
-    details: { date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string },
+    details: { date: string, timeSlot: string, courseName: string, courseId?: string, batchId: string, isManual?: boolean },
     callbacks: { onSuccess: () => void, onError: (message: string) => void }
   ) => {
     let activeUserId = user?.id;
@@ -489,38 +489,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            const newLectureData: Omit<Lecture, 'id'> = {
-                qrCode: `lecture-${details.courseName}-${details.date}-${details.timeSlot}-${Date.now()}`,
-                courseName: details.courseName,
-                courseId: details.courseId,
-                batchId: details.batchId,
-                date: details.date,
-                timeSlot: details.timeSlot,
-                createdAt: new Date().toISOString(),
-                location: {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                },
-            };
-            
-            const { data: newLecture, error } = await apiAddLecture(newLectureData as Lecture);
-            if (error) {
-                callbacks.onError(error);
-            } else if (newLecture) {
-                updateState(prev => ({ lectures: [...prev.lectures, newLecture] }));
-                callbacks.onSuccess();
-                toast.success('تم إنشاء المحاضرة بنجاح!');
-            } else {
-                callbacks.onError("فشل حفظ المحاضرة في قاعدة البيانات.");
-            }
-        },
-        (error: GeolocationPositionError) => {
-            callbacks.onError('فشل في تحديد موقعك. لا يمكن إنشاء باركود بدونه.');
-        },
-        { enableHighAccuracy: true }
-    );
+    const createLecture = async (location: { latitude: number; longitude: number }) => {
+        const newLectureData: Omit<Lecture, 'id'> = {
+            qrCode: details.isManual ? `manual-${details.courseId}-${Date.now()}` : `lecture-${details.courseName}-${details.date}-${details.timeSlot}-${Date.now()}`,
+            courseName: details.courseName,
+            courseId: details.courseId,
+            batchId: details.batchId,
+            date: details.date,
+            timeSlot: details.timeSlot,
+            createdAt: new Date().toISOString(),
+            location: location,
+        };
+        
+        const { data: newLecture, error } = await apiAddLecture(newLectureData as Lecture);
+        if (error) {
+            callbacks.onError(error);
+        } else if (newLecture) {
+            updateState(prev => ({ lectures: [...prev.lectures, newLecture] }));
+            callbacks.onSuccess();
+            toast.success(details.isManual ? 'تم إنشاء المحاضرة اليدوية بنجاح!' : 'تم إنشاء المحاضرة بنجاح!');
+        } else {
+            callbacks.onError("فشل حفظ المحاضرة في قاعدة البيانات.");
+        }
+    };
+
+    if (details.isManual) {
+        // 💡 إنشاء فوري بدون طلب أو تتبع للموقع
+        createLecture({ latitude: 0, longitude: 0 });
+    } else {
+        // طلب الموقع لإنشاء الباركود
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                createLecture({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+            },
+            (error: GeolocationPositionError) => {
+                callbacks.onError('فشل في تحديد موقعك. لا يمكن إنشاء باركود بدونه.');
+            },
+            { enableHighAccuracy: true }
+        );
+    }
   }, [state.students, user, updateState]);
 
   const deleteLecture = useCallback(async (lectureId: string) => {

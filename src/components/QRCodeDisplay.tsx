@@ -1,8 +1,5 @@
-
-import React, { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
+import React, { useState, useEffect } from 'react';
 import { Lecture } from '../types';
-import { QrCodeIcon } from './icons';
 
 interface QRCodeDisplayProps {
     activeLecture: Lecture | null;
@@ -11,154 +8,88 @@ interface QRCodeDisplayProps {
     isRamadanMode?: boolean;
 }
 
-const QR_CODE_VALIDITY_MS = 15 * 60 * 1000; // 15 minutes in ms
+const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ activeLecture, onGenerateNew, title = "الباركود النشط", isRamadanMode }) => {
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+    const isValid = activeLecture && timeLeft > 0;
+    const isManual = activeLecture?.qrCode.startsWith('manual-'); // 👈 التحقق مما إذا كانت يدوية
 
-const formatTime = (ms: number) => {
-    if (ms < 0) ms = 0;
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-};
-
-const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ activeLecture, onGenerateNew, title, isRamadanMode }) => {
-    const [timeLeft, setTimeLeft] = useState<number | null>(null);
-    const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
-
-    // Effect to generate QR code data URL locally
     useEffect(() => {
-        if (activeLecture?.qrCode) {
-            QRCode.toDataURL(
-                activeLecture.qrCode,
-                {
-                    errorCorrectionLevel: 'H',
-                    margin: 1,
-                    width: 184,
-                    color: { dark: '#000000FF', light: '#FFFFFFFF' }
-                },
-                (err: any, url: string) => {
-                    if (err) {
-                        console.error('QR Code generation failed:', err);
-                        setQrCodeDataUrl(null);
-                    } else {
-                        setQrCodeDataUrl(url);
-                    }
-                }
-            );
-        } else {
-            setQrCodeDataUrl(null); // Clear QR if no active lecture
-        }
-    }, [activeLecture?.qrCode]);
-
-
-    // Effect for timer logic, runs every second
-    useEffect(() => {
-        if (!activeLecture?.createdAt) {
-            setTimeLeft(null);
+        if (!activeLecture) {
+            setTimeLeft(0);
             return;
         }
 
-        const calculateTimeLeft = () => {
-            const elapsedTime = Date.now() - new Date(activeLecture.createdAt).getTime();
-            const remaining = QR_CODE_VALIDITY_MS - elapsedTime;
-            setTimeLeft(Math.max(0, remaining));
+        const calculateTime = () => {
+            const elapsed = Date.now() - new Date(activeLecture.createdAt).getTime();
+            const remaining = (15 * 60 * 1000) - elapsed;
+            setTimeLeft(remaining > 0 ? remaining : 0);
         };
 
-        calculateTimeLeft();
-        const intervalId = setInterval(calculateTimeLeft, 1000);
-
-        return () => clearInterval(intervalId);
+        calculateTime();
+        const timer = setInterval(calculateTime, 1000);
+        return () => clearInterval(timer);
     }, [activeLecture]);
 
-    const isExpired = timeLeft !== null && timeLeft <= 0;
-    const timePercentage = timeLeft !== null ? Math.max(0, (timeLeft / QR_CODE_VALIDITY_MS) * 100) : 0;
-    const circumference = 2 * Math.PI * 55; // Radius of 55
-    const strokeDashoffset = circumference - (circumference * timePercentage) / 100;
-
-    const ActiveLectureCard = () => (
-        <>
-            <div className="relative w-64 h-64 mb-6">
-                <svg className="absolute top-0 left-0 w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                    <circle
-                        className="text-slate-700"
-                        strokeWidth="10" stroke="currentColor" fill="transparent"
-                        r="55" cx="60" cy="60"
-                    />
-                    <circle
-                        className={`transition-colors duration-500 ${isExpired ? 'text-red-500' : (isRamadanMode ? 'text-yellow-500' : 'text-blue-500')}`}
-                        strokeWidth="10" strokeLinecap="round" stroke="currentColor" fill="transparent"
-                        r="55" cx="60" cy="60"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
-                        style={{ transition: 'stroke-dashoffset 1s linear' }}
-                    />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                     <div className="p-2 bg-white rounded-md shadow-inner">
-                        {qrCodeDataUrl ? (
-                             <img
-                                src={qrCodeDataUrl}
-                                alt="QR Code"
-                                width="184"
-                                height="184"
-                            />
-                        ) : (
-                             <div className="w-[184px] h-[184px] flex items-center justify-center bg-gray-100 rounded-sm">
-                                <span className="text-xs text-gray-500">جاري الإنشاء...</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="text-center w-full px-2">
-                <h3 className={`text-xl font-bold truncate ${isRamadanMode ? 'ramadan-text-gold' : 'text-gray-100'}`}>{activeLecture!.courseName}</h3>
-                <p className="text-sm text-gray-300">{activeLecture!.date} | {activeLecture!.timeSlot}</p>
-                <div className={`mt-4 font-mono text-5xl font-bold transition-colors duration-500 ${isExpired ? 'text-red-500' : (isRamadanMode ? 'text-yellow-500' : 'text-gray-200')}`}>
-                    {timeLeft !== null ? formatTime(timeLeft) : '00:00'}
-                </div>
-                 {isExpired && <p className="text-red-500 font-semibold mt-2">انتهت صلاحية الباركود</p>}
-            </div>
-            {onGenerateNew && (
-                <button 
-                    onClick={onGenerateNew} 
-                    className={`mt-8 w-full font-semibold px-4 py-3 rounded-lg transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 transform hover:-translate-y-0.5 ${isRamadanMode ? 'ramadan-btn-gold focus:ring-yellow-500' : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500'}`}
-                >
-                    إنشاء باركود جديد
-                </button>
-            )}
-        </>
-    );
-
-    const NoLectureCard = () => (
-         <div className="flex flex-col items-center justify-center text-center text-gray-400 p-4 sm:p-8 min-h-[300px] sm:min-h-[500px]">
-            <QrCodeIcon className="w-24 h-24 sm:w-32 sm:h-32 mx-auto text-slate-700 mb-4" />
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-300">لا يوجد باركود فعال</h3>
-            {onGenerateNew ? (
-                <>
-                    <p className="mt-1 text-xs sm:text-sm max-w-xs">
-                        اضغط على الزر أدناه لإنشاء باركود جديد للمحاضرة الحالية.
-                    </p>
-                    <button 
-                        onClick={onGenerateNew} 
-                        className={`mt-6 sm:mt-8 w-full font-bold px-4 py-3 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all animate-pulse-glow text-sm sm:text-base ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'}`}
-                    >
-                        إنشاء باركود للمحاضرة
-                    </button>
-                </>
-            ) : (
-                <p className="mt-1 text-xs sm:text-sm max-w-xs text-gray-500">
-                   انتظر حتى يقوم المدير بإنشاء باركود جديد.
-                </p>
-            )}
-        </div>
-    );
+    const formatTime = (ms: number) => {
+        const minutes = Math.floor(ms / 60000);
+        const seconds = Math.floor((ms % 60000) / 1000);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
 
     return (
-        <div className={`backdrop-blur-2xl border rounded-2xl shadow-lg p-4 sm:p-6 h-fit sticky top-20 sm:top-24 flex flex-col items-center animate-slide-in-up transition-all duration-500 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/85 border-slate-800/50'}`} style={{ animationDelay: '200ms' }}>
-            {title && <h2 className={`font-bold text-base sm:text-lg mb-4 w-full text-center border-b pb-2 transition-colors ${isRamadanMode ? 'ramadan-text-gold border-yellow-500/20' : 'text-white border-slate-700'}`}>{title}</h2>}
-            <div key={activeLecture ? activeLecture.qrCode : 'no-lecture'} className="w-full flex flex-col items-center animate-pop-in">
-                 {activeLecture && !isExpired ? <ActiveLectureCard /> : <NoLectureCard />}
-            </div>
+        <div className={`backdrop-blur-2xl border p-6 sm:p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center text-center transition-all sticky top-24 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
+            <h2 className={`text-2xl font-black mb-6 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>{title}</h2>
+            
+            {activeLecture ? (
+                <div className="w-full">
+                    {isManual ? (
+                        <div className="flex flex-col items-center justify-center py-10 bg-slate-800/40 rounded-[2rem] border-2 border-dashed border-slate-700 mb-6">
+                            <div className="p-4 bg-purple-500/10 rounded-full mb-4">
+                                <svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">محاضرة يدوية</h3>
+                            <p className="text-sm text-gray-400 text-center px-4 leading-relaxed">
+                                هذه المحاضرة مخصصة للتحضير اليدوي بالمناداة، ولا تتطلب مسح باركود أو تتبع للموقع.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className={`p-4 rounded-[2rem] inline-block mb-6 shadow-xl transition-all ${isValid ? (isRamadanMode ? 'bg-yellow-500/10 shadow-yellow-500/20' : 'bg-white shadow-blue-500/20') : 'bg-slate-800 opacity-50 grayscale'}`}>
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${activeLecture.qrCode}`} 
+                                alt="QR Code" 
+                                className="w-48 h-48 sm:w-56 sm:h-56 rounded-xl"
+                            />
+                        </div>
+                    )}
+                    
+                    <div className="space-y-2 mb-8">
+                        <p className={`text-lg font-bold ${isRamadanMode ? 'ramadan-text-gold' : 'text-blue-400'}`}>{activeLecture.courseName}</p>
+                        <p className="text-sm text-gray-400 font-medium">{activeLecture.date} | {activeLecture.timeSlot}</p>
+                        {isValid && (
+                            <p className="text-sm font-bold text-gray-300 mt-2 bg-slate-800/50 py-2 rounded-xl border border-slate-700/50">
+                                الوقت المتبقي: <span className={isRamadanMode ? 'text-yellow-500' : 'text-blue-400 font-mono'}>{formatTime(timeLeft)}</span>
+                            </p>
+                        )}
+                        {!isValid && <p className="text-sm font-bold text-red-500 mt-2 bg-red-500/10 py-2 rounded-xl border border-red-500/20">انتهى وقت التحضير</p>}
+                    </div>
+                </div>
+            ) : (
+                <div className="py-12 w-full bg-slate-800/30 rounded-[2rem] border-2 border-dashed border-slate-700 mb-6">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <p className="text-gray-400 font-medium">لا توجد محاضرة نشطة حالياً</p>
+                </div>
+            )}
+
+            {onGenerateNew && (
+                <button 
+                    onClick={onGenerateNew}
+                    className={`w-full py-4 text-white font-black rounded-2xl transition-all shadow-lg active:scale-95 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/25'}`}
+                >
+                    + إنشاء محاضرة جديدة
+                </button>
+            )}
         </div>
     );
 };

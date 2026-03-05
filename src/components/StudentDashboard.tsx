@@ -116,7 +116,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         date: new Date().toISOString().split('T')[0], 
         startTime: '08:00', 
         endTime: '09:00', 
-        lectureName: '' 
+        lectureName: '',
+        isManual: false // 👈 الحقل الجديد
     });
     
     const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,7 +218,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }
     }, [courses, selectedCourseId]);
 
-    const handleQrFormSubmit = (e: React.FormEvent) => {
+   const handleQrFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsCreatingQr(true);
         setQrError(null);
@@ -235,14 +236,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             finalLectureName = `${selectedCourse.name} - محاضرة ${lectureCount}`;
         }
 
+        // 💡 إرسال البيانات لدالة الإنشاء مع خيار isManual
         onGenerateQrCode(
             { 
                 date: qrForm.date, 
-                // 💡 دمج وقت البداية والنهاية بالشكل الجديد
                 timeSlot: `${formatTimeToArabic(qrForm.startTime)} - ${formatTimeToArabic(qrForm.endTime)}`,
                 courseName: finalLectureName, 
                 courseId: selectedCourse.id,
-                batchId: student.batchId 
+                batchId: student.batchId,
+                isManual: qrForm.isManual // 👈 الحقل الجديد هنا
             },
             {
                 onSuccess: () => {
@@ -506,8 +508,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const missedLectures = useMemo(() => {
         if (!student?.id) return [];
         const attendedLectureIds = new Set(attendanceRecords.filter(r => r.studentId === student.id).map(rec => rec.lectureId));
-        return lectures.filter(lecture => (Date.now() - new Date(lecture.createdAt).getTime() > QR_CODE_VALIDITY) && !attendedLectureIds.has(lecture.qrCode))
-                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return lectures.filter(lecture => {
+            // 💡 إزالة شرط الـ 15 دقيقة.. المحاضرة تعتبر غياب فوراً إذا لم يحضر الطالب
+            return !attendedLectureIds.has(lecture.qrCode) && !attendedLectureIds.has(lecture.id);
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [lectures, attendanceRecords, student?.id]);
 
     const groupMembers = useMemo(() => {
@@ -1345,8 +1349,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         </div>
                     )}
 
-                    <button type="submit" disabled={isCreatingQr || !selectedCourseId} className="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-green-600/20 disabled:opacity-50">
-                        {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور'}
+                    <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+                        <input 
+                            id="isManual" 
+                            type="checkbox" 
+                            checked={qrForm.isManual} 
+                            onChange={(e) => setQrForm(p => ({...p, isManual: e.target.checked}))} 
+                            className="w-5 h-5 rounded-lg border-slate-600 bg-slate-700 text-blue-500 focus:ring-0 cursor-pointer"
+                        />
+                        <label htmlFor="isManual" className="text-sm font-bold text-gray-300 cursor-pointer select-none">
+                            محاضرة يدوية (بدون باركود وتتبع للموقع)
+                        </label>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        disabled={isCreatingQr || !selectedCourseId} 
+                        className={`w-full py-4 text-white font-black rounded-2xl transition-all shadow-lg disabled:opacity-50 ${qrForm.isManual ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20' : 'bg-green-600 hover:bg-green-700 shadow-green-600/20'}`}
+                    >
+                        {isCreatingQr ? 'جاري الإنشاء...' : (qrForm.isManual ? 'إنشاء محاضرة يدوية' : 'بدء رصد الحضور بالباركود')}
                     </button>
                 </form>
             </Modal>
