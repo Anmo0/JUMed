@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { Student, AttendanceRecord, Lecture, Course, Group } from '../types';
+import { Student, AttendanceRecord, Lecture, Course, Group, Batch } from '../types'; // 👈 أضف كلمة Batch
 import { CameraIcon, MapPinIcon, CheckCircleIcon, AlertTriangleIcon, UsersIcon, ClipboardListIcon, XCircleIcon, EditIcon, TrashIcon, CopyIcon } from './icons';
 import Modal from './Modal';
 import QRCodeScanner from './QRCodeScanner';
@@ -33,7 +33,8 @@ const getLocalYYYYMMDD = () => {
 interface StudentDashboardProps {
     student: Student;
     allStudents: Student[];
-    groups?: Group[]; 
+    groups?: Group[];
+    currentBatch?: Batch; // 👈 أضف هذا السطر 
     attendanceRecords: AttendanceRecord[];
     onRecordAttendance: (location: { latitude: number; longitude: number }) => Promise<{ success: boolean, message: string }>;
     onManualAttendance: (studentId: string, lectureId: string) => void;
@@ -79,6 +80,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     student, 
     allStudents,
     groups, 
+    currentBatch, // 👈 أضف هذا
     attendanceRecords,
     onRecordAttendance, 
     onManualAttendance,
@@ -491,70 +493,152 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         if (!selectedLecture || !activeGroup) return;
 
         setIsGroupExportingPdf(true);
+        const actualLectureId = selectedLecture.id || selectedLecture.qrCode;
+        const attendanceCount = groupMembers.filter(m => attendanceRecords.some(r => r.studentId === m.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId))).length;
+
+        const styles = {
+            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', serif; color: #1e293b; box-sizing: border-box;",
+            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px;",
+            headerTextRight: "text-align: right;",
+            headerTitle: "font-size: 32px; font-weight: bold; color: #1e293b; margin: 0; line-height: 1.2;",
+            headerSubtitle: "font-size: 18px; color: #64748b; margin-top: 5px;",
+            headerTextLeft: "text-align: left;",
+            printDate: "font-size: 14px; color: #94a3b8;",
+            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;",
+            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0;",
+            infoItemLast: "text-align: center; flex: 1;",
+            infoLabel: "font-size: 14px; color: #64748b; margin-bottom: 4px; display: block; font-weight: 500;",
+            infoValue: "font-size: 18px; font-weight: bold; color: #0f172a;",
+            table: "width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;",
+            th: "background-color: #1e293b; color: white; padding: 12px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;",
+            td: "padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle;",
+            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
+            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
+            footer: "margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; color: #94a3b8; font-size: 12px;"
+        };
+
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const imgWidth = 210; 
+        
+        let remainingStudents = [...groupMembers];
+        let pageNum = 1;
+
         try {
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const container = document.createElement('div');
-            container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
-            container.style.background = 'white'; container.style.padding = '40px'; container.style.width = '800px'; container.style.direction = 'rtl'; container.style.fontFamily = 'sans-serif';
-            
-            let html = `
-                <div style="text-align:center; margin-bottom: 30px;">
-                    <h1 style="color: #0f172a; margin: 0; font-size: 28px; font-weight: bold;">تقرير حضور مجموعة: ${activeGroup.name}</h1>
-                    <h3 style="color: #475569; margin: 10px 0; font-size: 16px;">المقرر: ${selectedLecture.courseName} | التاريخ: ${selectedLecture.date}</h3>
-                </div>
-                <table style="width:100%; border-collapse: collapse; font-size: 16px;" border="1">
-                    <tr style="background:#f1f5f9; color: #334155;">
-                        <th style="padding:12px; text-align:center; border-bottom: 2px solid #cbd5e1;">#</th>
-                        <th style="padding:12px; text-align:center; border-bottom: 2px solid #cbd5e1;">الرقم الجامعي</th>
-                        <th style="padding:12px; text-align:right; border-bottom: 2px solid #cbd5e1;">اسم الطالب</th>
-                        <th style="padding:12px; text-align:center; border-bottom: 2px solid #cbd5e1;">الحالة</th>
-                    </tr>
-            `;
+            while (remainingStudents.length > 0) {
+                const rowsPerPage = pageNum === 1 ? 10 : 18;
+                const currentBatchStudents = remainingStudents.slice(0, rowsPerPage);
+                remainingStudents = remainingStudents.slice(rowsPerPage);
 
-            groupMembers.forEach((member, index) => {
-                const actualLectureId = selectedLecture.id || selectedLecture.qrCode;
-                const isPresent = attendanceRecords.some(r => r.studentId === member.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId));
-                const status = isPresent ? 'حاضر' : 'غائب';
-                const statusColor = isPresent ? '#166534' : '#991b1b';
-                const statusBg = isPresent ? '#dcfce7' : '#fee2e2';
-                const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                const container = document.createElement('div');
+                container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
+                container.style.cssText += styles.container;
 
-                html += `
-                    <tr style="background-color: ${rowBg};">
-                        <td style="padding:10px; text-align:center; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">${member.serialNumber}</td>
-                        <td style="padding:10px; text-align:center; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #475569;">${member.universityId}</td>
-                        <td style="padding:10px; text-align:right; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0f172a;">${member.name}</td>
-                        <td style="padding:10px; text-align:center; border-bottom: 1px solid #e2e8f0;">
-                            <span style="background-color: ${statusBg}; color: ${statusColor}; padding: 6px 12px; border-radius: 9999px; font-weight: bold; font-size: 14px; display: inline-block;">
-                                ${status}
-                            </span>
-                        </td>
-                    </tr>
+                let htmlContent = `<div>`;
+                if (pageNum === 1) {
+                    htmlContent += `
+                        <div style="${styles.headerContainer}">
+                            <div style="${styles.headerTextRight}">
+                                <h1 style="${styles.headerTitle}">تقرير حضور مجموعة: ${activeGroup.name}</h1>
+                                <p style="${styles.headerSubtitle}">${currentBatch?.batchName || ''} ${currentBatch?.currentYear ? `| السنة ${currentBatch.currentYear}` : ''}</p>
+                            </div>
+                            <div style="${styles.headerTextLeft}">
+                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            </div>
+                        </div>
+                        <div style="${styles.infoCard}">
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">المقرر</span>
+                                <span style="${styles.infoValue}">${selectedLecture.courseName}</span>
+                            </div>
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">تاريخ المحاضرة</span>
+                                <span style="${styles.infoValue}">${selectedLecture.date}</span>
+                            </div>
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">التوقيت</span>
+                                <span style="${styles.infoValue}">${selectedLecture.timeSlot}</span>
+                            </div>
+                            <div style="${styles.infoItemLast}">
+                                <span style="${styles.infoLabel}">إحصائية الحضور</span>
+                                <span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    htmlContent += `<div style="height: 20px;"></div>`;
+                }
+
+                htmlContent += `
+                    <table style="${styles.table}">
+                        <thead>
+                            <tr>
+                                <th style="${styles.th}">#</th>
+                                <th style="${styles.th}">الرقم الجامعي</th>
+                                <th style="${styles.th}">اسم الطالب</th>
+                                <th style="${styles.th}">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                 `;
-            });
 
-            html += `</table>`;
-            container.innerHTML = html; document.body.appendChild(container);
+                currentBatchStudents.forEach((member, index) => {
+                    const isPresent = attendanceRecords.some(r => r.studentId === member.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId));
+                    const isOutsideRadius = attendanceRecords.find(r => r.studentId === member.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId))?.isOutsideRadius;
+                    
+                    const displayStatus = isPresent ? 'حاضر' : 'غائب';
+                    const badgeStyle = isPresent ? styles.statusPresent : styles.statusAbsent;
+                    let statusBadge = `<span style="${badgeStyle}">${displayStatus}</span>`;
+                    
+                    if (isOutsideRadius) {
+                        statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(تنبيه: خارج النطاق)</div>`;
+                    }
 
-            const canvas = await html2canvas(container, { 
-                scale: 1.5, 
-                useCORS: true, 
-                logging: false, 
-                backgroundColor: '#ffffff',
-                ignoreElements: (element: any) => element.id === 'root', 
-                onclone: (clonedDoc: any) => { clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove()); } 
-            });
-            const imgData = canvas.toDataURL('image/jpeg', 0.9);
-            const imgProps = pdf.getImageProperties(imgData);
-            const pdfImgHeight = (imgProps.height * 190) / imgProps.width; 
+                    const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    const finalBg = !isPresent ? '#fff1f2' : rowBg; 
 
-            pdf.addImage(imgData, 'JPEG', 10, 10, 190, pdfImgHeight, undefined, 'FAST');
+                    htmlContent += `
+                        <tr style="background-color: ${finalBg};">
+                            <td style="${styles.td}">${member.serialNumber}</td>
+                            <td style="${styles.td} font-family: 'Tajawal', sans-serif;">${member.universityId}</td>
+                            <td style="${styles.td} text-align: right; padding-right: 20px;">${member.name}</td>
+                            <td style="${styles.td}">${statusBadge}</td>
+                        </tr>
+                    `;
+                });
+
+                htmlContent += `</tbody></table>`;
+                htmlContent += `<div style="${styles.footer}">تم إنشاء هذا التقرير آلياً. - صفحة ${pageNum}</div></div>`; 
+
+                container.innerHTML = htmlContent;
+                document.body.appendChild(container);
+
+                const canvas = await html2canvas(container, { 
+                    scale: 1.2, 
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    ignoreElements: (element: any) => element.id === 'root',
+                    onclone: (clonedDoc: any) => {
+                        const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
+                        links.forEach((link: any) => link.remove());
+                        clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove());
+                    }
+                });
+                
+                const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfImgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+                if (pageNum > 1) pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
+                document.body.removeChild(container);
+                pageNum++;
+            }
             pdf.save(`Attendance-Group-${activeGroup.name}-${selectedLecture.date}.pdf`);
-            document.body.removeChild(container);
             toast.success("تم تصدير الـ PDF بنجاح");
         } catch (error) {
             console.error(error);
-            toast.error("حدث خطأ أثناء تصدير الـ PDF للمجموعة.");
+            toast.error("حدث خطأ أثناء التصدير.");
         } finally {
             setIsGroupExportingPdf(false);
         }

@@ -197,6 +197,7 @@ function AppContent() {
                             student={safeStudents.find(s => s.id === currentUser?.id)!}
                             allStudents={safeStudents} attendanceRecords={safeAttendanceRecords}
                             groups={safeGroups}
+                            currentBatch={currentBatch} // 👈 أضف هذا السطر فقط
                             onRecordAttendance={recordAttendance} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
                             onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal} onDeleteGroupLocal={deleteGroupLocal}
                             activeLecture={activeLecture} lectures={safeLectures} courses={safeStudentCourses}

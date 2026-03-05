@@ -893,6 +893,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         setDeleteAllGroupsModalOpen(false);
     };
 
+    const handleConfirmArchiveBatch = async () => {
+        if (!groupActionTarget) return;
+        const updates = [];
+        if (groupActionTarget.male) updates.push({ ...groupActionTarget.male, isArchived: !groupActionTarget.isArchived });
+        if (groupActionTarget.female) updates.push({ ...groupActionTarget.female, isArchived: !groupActionTarget.isArchived });
+        try { 
+            await saveBatches(updates); 
+            setBatches(prev => prev.map(b => updates.find(u => u.id === b.id) || b)); 
+            setArchiveBatchModalOpen(false); 
+            setGroupActionTarget(null); 
+            toast.success('تم تحديث حالة الدفعة بنجاح'); 
+        } 
+        catch (error) { toast.error('حدث خطأ أثناء التحديث'); }
+    };
+
     const handleConfirmDeleteBatch = async () => {
         if (!groupActionTarget) return;
         try {
