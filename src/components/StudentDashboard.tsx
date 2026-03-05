@@ -314,189 +314,68 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     }, [allStudents, attendanceRecords, managementSelectedLectureId, lectures]);
 
-    const handleExportPdf = async () => {
-        const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId);
-        if (!selectedLecture) return;
+    const handleGroupExportPdf = async () => {
+        const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId);
+        if (!selectedLecture || !activeGroup) return;
 
         setIsExportingPdf(true);
-
-        const attendanceCount = managementAttendanceData.filter(s => s.status !== 'غائب').length;
-
-        const styles = {
-            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', serif; color: #1e293b; box-sizing: border-box;",
-            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px;",
-            headerTextRight: "text-align: right;",
-            headerTitle: "font-size: 32px; font-weight: bold; color: #1e293b; margin: 0; line-height: 1.2;",
-            headerSubtitle: "font-size: 18px; color: #64748b; margin-top: 5px;",
-            headerTextLeft: "text-align: left;",
-            printDate: "font-size: 14px; color: #94a3b8;",
-            
-            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;",
-            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0;",
-            infoItemLast: "text-align: center; flex: 1;",
-            infoLabel: "font-size: 14px; color: #64748b; margin-bottom: 4px; display: block; font-weight: 500;",
-            infoValue: "font-size: 18px; font-weight: bold; color: #0f172a;",
-            
-            table: "width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;",
-            th: "background-color: #1e293b; color: white; padding: 12px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;",
-            td: "padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle;",
-            
-            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            
-            footer: "margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; color: #94a3b8; font-size: 12px;"
-        };
-
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const imgWidth = 210; 
-        
-        let remainingStudents = [...managementAttendanceData];
-        let pageNum = 1;
-
         try {
-            while (remainingStudents.length > 0) {
-                const rowsPerPage = pageNum === 1 ? 10 : 18;
-                const currentBatch = remainingStudents.slice(0, rowsPerPage);
-                remainingStudents = remainingStudents.slice(rowsPerPage);
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.top = '-9999px';
+            container.style.background = 'white';
+            container.style.padding = '40px';
+            container.style.width = '800px';
+            container.style.direction = 'rtl';
+            
+            let html = `
+                <div style="text-align:center; margin-bottom: 30px; font-family: sans-serif;">
+                    <h1 style="color: #0f172a; margin: 0;">تقرير حضور مجموعة: ${activeGroup.name}</h1>
+                    <h3 style="color: #475569; margin: 10px 0;">المقرر: ${selectedLecture.courseName} | التاريخ: ${selectedLecture.date}</h3>
+                </div>
+                <table style="width:100%; border-collapse: collapse; font-family: sans-serif; font-size: 16px;" border="1">
+                    <tr style="background:#f1f5f9; color: #334155;">
+                        <th style="padding:15px; text-align:center;">#</th>
+                        <th style="padding:15px; text-align:center;">الرقم الجامعي</th>
+                        <th style="padding:15px; text-align:right;">اسم الطالب</th>
+                        <th style="padding:15px; text-align:center;">الحالة</th>
+                    </tr>
+            `;
 
-                const container = document.createElement('div');
-                container.style.position = 'fixed';
-                container.style.top = '0';
-                container.style.left = '-9999px';
-                container.style.zIndex = '-9999';
-                container.style.cssText += styles.container;
+            groupMembers.forEach(member => {
+                const actualLectureId = selectedLecture.id || selectedLecture.qrCode;
+                const isPresent = attendanceRecords.some(r => r.studentId === member.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId));
+                const status = isPresent ? 'حاضر' : 'غائب';
+                const statusColor = isPresent ? '#166534' : '#991b1b';
+                const statusBg = isPresent ? '#dcfce7' : '#fee2e2';
 
-                let htmlContent = `<div>`;
-
-                if (pageNum === 1) {
-                    htmlContent += `
-                        <div style="${styles.headerContainer}">
-                            <div style="${styles.headerTextRight}">
-                                <h1 style="${styles.headerTitle}">تقرير الحضور</h1>
-                            </div>
-                            <div style="${styles.headerTextLeft}">
-                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            </div>
-                        </div>
-
-                        <div style="${styles.infoCard}">
-                            <div style="${styles.infoItem}">
-                                <span style="${styles.infoLabel}">المقرر</span>
-                                <span style="${styles.infoValue}">${selectedLecture.courseName}</span>
-                            </div>
-                            <div style="${styles.infoItem}">
-                                <span style="${styles.infoLabel}">تاريخ المحاضرة</span>
-                                <span style="${styles.infoValue}">${selectedLecture.date}</span>
-                            </div>
-                            <div style="${styles.infoItem}">
-                                <span style="${styles.infoLabel}">التوقيت</span>
-                                <span style="${styles.infoValue}">${selectedLecture.timeSlot}</span>
-                            </div>
-                            <div style="${styles.infoItemLast}">
-                                <span style="${styles.infoLabel}">إحصائية الحضور</span>
-                                <span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    htmlContent += `<div style="height: 20px;"></div>`;
-                }
-
-                htmlContent += `
-                    <table style="${styles.table}">
-                        <thead>
-                            <tr>
-                                <th style="${styles.th}">#</th>
-                                <th style="${styles.th}">الرقم الجامعي</th>
-                                <th style="${styles.th}">اسم الطالب</th>
-                                <th style="${styles.th}">المجموعة</th>
-                                <th style="${styles.th}">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                html += `
+                    <tr>
+                        <td style="padding:12px; text-align:center; font-weight: bold;">${member.serialNumber}</td>
+                        <td style="padding:12px; text-align:center; font-family: monospace;">${member.universityId}</td>
+                        <td style="padding:12px; text-align:right; font-weight: bold;">${member.name}</td>
+                        <td style="padding:12px; text-align:center;">
+                            <span style="background-color: ${statusBg}; color: ${statusColor}; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                                ${status}
+                            </span>
+                        </td>
+                    </tr>
                 `;
+            });
 
-                currentBatch.forEach((student, index) => {
-                    const isAbsent = student.status === 'غائب';
-                    const globalIndex = managementAttendanceData.indexOf(student);
-                    const rowBg = globalIndex % 2 === 0 ? '#ffffff' : '#f8fafc';
-                    const finalBg = isAbsent ? '#fff1f2' : rowBg; 
-                    
-                    let displayStatus = student.status;
-                    let badgeStyle = styles.statusAbsent;
-                    
-                    if (student.status === 'حاضر') {
-                         displayStatus = 'حاضر';
-                         badgeStyle = styles.statusPresent;
-                    }
-                    
-                    let statusBadge = `<span style="${badgeStyle}">${displayStatus}</span>`;
-                    
-                    if (student.record?.isOutsideRadius) {
-                        statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(تنبيه: خارج النطاق)</div>`;
-                    }
+            html += `</table>`;
+            container.innerHTML = html;
+            document.body.appendChild(container);
 
-                    htmlContent += `
-                        <tr style="background-color: ${finalBg};">
-                            <td style="${styles.td}">${student.serialNumber}</td>
-                            <td style="${styles.td} font-family: 'Tajawal', sans-serif;">${student.universityId}</td>
-                            <td style="${styles.td} text-align: right; padding-right: 20px;">${student.name}</td>
-                            <td style="${styles.td}">${student.groupName || '-'}</td>
-                            <td style="${styles.td}">${statusBadge}</td>
-                        </tr>
-                    `;
-                });
-
-                htmlContent += `
-                        </tbody>
-                    </table>
-                `;
-
-                htmlContent += `
-                    <div style="${styles.footer}">
-                        تم إنشاء هذا التقرير آلياً. - صفحة ${pageNum}
-                    </div>
-                </div>`; 
-
-                container.innerHTML = htmlContent;
-                document.body.appendChild(container);
-
-                const canvas = await html2canvas(container, { 
-                    scale: 1.2, 
-                    useCORS: true,
-                    logging: false,
-                    ignoreElements: (element: any) => element.id === 'root',
-                    onclone: (clonedDoc: any) => {
-                        const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
-                        links.forEach((link: any) => {
-                            if (!link.href.includes('fonts.googleapis.com')) {
-                                link.remove();
-                            }
-                        });
-                        const styles = clonedDoc.querySelectorAll('style');
-                        styles.forEach((style: any) => style.remove());
-                    }
-                });
-                const imgData = canvas.toDataURL('image/jpeg', 0.8);
-                
-                const imgProps = pdf.getImageProperties(imgData);
-                const pdfImgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-                if (pageNum > 1) {
-                    pdf.addPage();
-                }
-
-                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
-                document.body.removeChild(container);
-                
-                pageNum++;
-            }
-
-            pdf.save(`attendance-${selectedLecture.courseName}-${selectedLecture.date}.pdf`);
-
+            const canvas = await html2canvas(container, { scale: 1.5 });
+            const imgData = canvas.toDataURL('image/jpeg', 0.9);
+            pdf.addImage(imgData, 'JPEG', 10, 10, 190, (canvas.height * 190) / canvas.width);
+            pdf.save(`Attendance-${activeGroup.name}-${selectedLecture.date}.pdf`);
+            document.body.removeChild(container);
         } catch (error) {
-            console.error("Failed to generate PDF:", error);
-            alert("حدث خطأ أثناء إنشاء ملف PDF.");
+            console.error(error);
+            alert("حدث خطأ أثناء تصدير الـ PDF");
         } finally {
             setIsExportingPdf(false);
         }
@@ -958,7 +837,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                     </p>
                                 </div>
                             ) : (
-                                // 3. واجهة عرض المجموعة المحددة (للطالب العادي أو الليدر الداخل إليها)
+                                // 3. واجهة عرض المجموعة المحددة
                                 <div className="animate-fade-in">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-10">
                                         <div className="flex flex-col items-start gap-2 w-full sm:w-auto">
@@ -972,7 +851,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             </h2>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                            {(student.isLeader || isBatchAdmin) && (
+                                            
+                                            {/* 💡 زر التصدير: يظهر لليدر الدفعة ولقائد المجموعة بشرط تحديد محاضرة */}
+                                            {(student?.isLeader || isBatchAdmin) && selectedLectureId && (
+                                                <button onClick={handleGroupExportPdf} disabled={isExportingPdf} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu shadow-lg disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'}`}>
+                                                    {isExportingPdf ? 'جاري التصدير...' : 'تصدير PDF للمجموعة'}
+                                                </button>
+                                            )}
+
+                                            {/* 💡 صلاحيات التعديل والإضافة: تظهر لليدر الدفعة (isBatchAdmin) فقط! */}
+                                            {isBatchAdmin && (
                                                 <>
                                                     <button onClick={() => { setEditGroupName(activeGroup?.name || ''); setEditGroupNameModalOpen(true); }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
                                                         تعديل الاسم
@@ -982,8 +870,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                     </button>
                                                 </>
                                             )}
-                                            {/* زر المغادرة يظهر فقط إذا كان الشخص عضواً فعلياً في هذه المجموعة */}
-                                            {student.groupId === activeGroupId && (
+
+                                            {/* 💡 زر المغادرة يظهر فقط إذا كان الشخص عضواً فعلياً في هذه المجموعة */}
+                                            {student?.groupId === activeGroupId && (
                                                 <button onClick={() => {
                                                     if (confirm('هل أنت متأكد من مغادرة المجموعة؟')) {
                                                         onUpdateStudent(student.id, { groupId: undefined, groupName: undefined, isLeader: false });
@@ -995,7 +884,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         </div>
                                     </div>
 
-                                    {(student.isLeader || isBatchAdmin) && (
+                                    {(student?.isLeader || isBatchAdmin) && (
                                         <div className="mb-6 w-full sm:w-64">
                                             <select 
                                                 value={selectedLectureId || ''}
@@ -1028,7 +917,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                 #{member.serialNumber}
                                                             </span>
                                                             <p className="text-white font-black text-base sm:text-lg">{member.name}</p>
-                                                            {member.id === student.id && <span className="bg-blue-500/20 text-blue-400 text-[8px] font-black px-2 py-0.5 rounded-full border border-blue-500/20">أنت</span>}
+                                                            {member.id === student?.id && <span className="bg-blue-500/20 text-blue-400 text-[8px] font-black px-2 py-0.5 rounded-full border border-blue-500/20">أنت</span>}
                                                             {member.tag && <span className="bg-purple-500/20 text-purple-400 text-[8px] font-black px-2 py-0.5 rounded-full border border-purple-500/20">{member.tag}</span>}
                                                         </div>
                                                         <p className="text-gray-500 font-mono text-[10px] sm:text-xs mt-1">ID: {member.universityId}</p>
@@ -1042,7 +931,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                         )}
 
                                                         <div className="flex gap-2">
-                                                            {student.isLeader && (
+                                                            {/* 💡 تعديل العلامة وتعيين القائد: لليدر الدفعة (isBatchAdmin) فقط! */}
+                                                            {isBatchAdmin && (
                                                                 <button onClick={() => {
                                                                     const newTag = prompt('أدخل العلامة للطالب:', member.tag);
                                                                     if (newTag !== null) {
@@ -1053,7 +943,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                 </button>
                                                             )}
                                                             
-                                                            {(student.isLeader || isBatchAdmin) && member.id !== student.id && (
+                                                            {isBatchAdmin && member.id !== student?.id && (
                                                                 <button onClick={() => {
                                                                     if (confirm(`هل أنت متأكد من ${member.isLeader ? 'إلغاء تعيين' : 'تعيين'} ${member.name} كقائد للمجموعة؟`)) {
                                                                         onUpdateStudent(member.id, { isLeader: !member.isLeader });
@@ -1063,7 +953,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                 </button>
                                                             )}
                                                             
-                                                            {selectedLectureId && (student.isLeader || isBatchAdmin) && (
+                                                            {/* 💡 التحضير والغياب: متاح لليدر الدفعة وقائد المجموعة */}
+                                                            {selectedLectureId && (student?.isLeader || isBatchAdmin) && (
                                                                 isPresent ? (
                                                                     <button onClick={() => onRemoveAttendance(member.id, actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                         <XCircleIcon className="w-3.5 h-3.5"/> غياب
