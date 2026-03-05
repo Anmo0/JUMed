@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, AttendanceRecord, Lecture, Course } from '../types';
+import { Student, AttendanceRecord, Lecture, Course, Group } from '../types';
 import { CameraIcon, MapPinIcon, CheckCircleIcon, AlertTriangleIcon, UsersIcon, ClipboardListIcon, XCircleIcon, EditIcon, TrashIcon, CopyIcon } from './icons';
 import Modal from './Modal';
 import QRCodeScanner from './QRCodeScanner';
@@ -34,7 +34,7 @@ const formatTimeToArabic = (time24: string) => {
 interface StudentDashboardProps {
     student: Student;
     allStudents: Student[];
-    groups?: Group[]; // 👈 أضف هذا السطر
+    groups?: Group[]; 
     attendanceRecords: AttendanceRecord[];
     onRecordAttendance: (location: { latitude: number; longitude: number }) => Promise<{ success: boolean, message: string }>;
     onManualAttendance: (studentId: string, lectureId: string) => void;
@@ -78,7 +78,7 @@ const TabButton: React.FC<{
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
     student, 
     allStudents,
-    groups, // 👈 أضف هذا
+    groups,
     attendanceRecords,
     onRecordAttendance, 
     onManualAttendance,
@@ -99,9 +99,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [activeTab, setActiveTab] = useState<'personal' | 'group' | 'management'>(() => {
         return (sessionStorage.getItem('studentActiveTab') as any) || 'personal';
     });
+
+    // 💡 تعريف مشرف الدفعة (الليدر الأساسي)
     const isBatchAdmin = student?.canManageAttendance || student?.isBatchLeader || false;
 
-    // 💡 حالات إدارة المجموعات لليدر
+    // 💡 حالات إدارة المجموعات
     const [managementSelectedGroupId, setManagementSelectedGroupId] = useState<string | null>(null);
     const activeGroupId = isBatchAdmin && managementSelectedGroupId ? managementSelectedGroupId : student?.groupId;
     const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId) || {name: student?.groupName}, [groups, activeGroupId, student?.groupName]);
@@ -133,14 +135,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }, [studentSearchQuery]);
     const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
 
-    // 💡 استخدام منتقي الوقت الجديد
     const [isQrModalOpen, setQrModalOpen] = useState(false);
     const [qrForm, setQrForm] = useState({ 
         date: new Date().toISOString().split('T')[0], 
         startTime: '08:00', 
         endTime: '09:00', 
         lectureName: '',
-        isManual: false // 👈 الحقل الجديد
+        isManual: false
     });
     
     const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,7 +158,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
     const [isDeleteLectureModalOpen, setDeleteLectureModalOpen] = useState(false);
     const [isClearAttendanceModalOpen, setClearAttendanceModalOpen] = useState(false);
+    
     const [isExportingPdf, setIsExportingPdf] = useState(false);
+    const [isGroupExportingPdf, setIsGroupExportingPdf] = useState(false); // لحالة تصدير المجموعة
+    
     const [selectedDateFilter, setSelectedDateFilter] = useState<string>('');
     const [managementSelectedLectureId, setManagementSelectedLectureId] = useState<string | null>(null);
     const [isRepeatModalOpen, setRepeatModalOpen] = useState(false);
@@ -235,7 +239,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         handleOpenQrModal();
     };
 
-    // 💡 جلب آخر مقرر تم اختياره، وحفظ أي تغيير جديد
     useEffect(() => {
         if (courses.length > 0 && !selectedCourseId) {
             const savedCourseId = localStorage.getItem('lastSelectedCourseId');
@@ -258,7 +261,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
    const handleQrFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // 💡 قراءة أي زر تم الضغط عليه
         const isManualMode = (e.nativeEvent as any).submitter?.name === 'manualBtn';
 
         setIsCreatingQr(true);
@@ -277,10 +279,29 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             finalLectureName = `${selectedCourse.name} - محاضرة ${lectureCount}`;
         }
 
-        onGenerateQrCode({ date: qrForm.date, timeSlot: `${formatTimeToArabic(qrForm.startTime)} - ${formatTimeToArabic(qrForm.endTime)}`, courseName: finalLectureName, courseId: selectedCourse.id, batchId: student?.batchId || '', isManual: isManualMode }, {
-            onSuccess: () => { setQrModalOpen(false); setIsCreatingQr(false); setSelectedDateFilter(qrForm.date); setManagementSelectedLectureId(null); setActiveTab('management'); },
-            onError: (message: string) => { setIsCreatingQr(false); setQrError(message); }
-        });
+        onGenerateQrCode(
+            { 
+                date: qrForm.date, 
+                timeSlot: `${formatTimeToArabic(qrForm.startTime)} - ${formatTimeToArabic(qrForm.endTime)}`,
+                courseName: finalLectureName, 
+                courseId: selectedCourse.id,
+                batchId: student?.batchId || '',
+                isManual: isManualMode
+            },
+            {
+                onSuccess: () => {
+                    setQrModalOpen(false);
+                    setIsCreatingQr(false);
+                    setSelectedDateFilter(qrForm.date); 
+                    setManagementSelectedLectureId(null);
+                    setActiveTab('management');
+                },
+                onError: (message: string) => {
+                    setIsCreatingQr(false);
+                    setQrError(message);
+                }
+            }
+        );
     }
 
     const handleConfirmDeleteLecture = () => {
@@ -314,20 +335,189 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     }, [allStudents, attendanceRecords, managementSelectedLectureId, lectures]);
 
-    const handleGroupExportPdf = async () => {
-        const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId);
-        if (!selectedLecture || !activeGroup) return;
+    // 💡 دالة تصدير PDF خاصة بـ "تحضير الدفعة" كاملة (للمشرفين فقط)
+    const handleExportPdf = async () => {
+        const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId || l.id === managementSelectedLectureId);
+        if (!selectedLecture) return;
 
         setIsExportingPdf(true);
+        const attendanceCount = managementAttendanceData.filter(s => s.status !== 'غائب').length;
+
+        const styles = {
+            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', serif; color: #1e293b; box-sizing: border-box;",
+            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px;",
+            headerTextRight: "text-align: right;",
+            headerTitle: "font-size: 32px; font-weight: bold; color: #1e293b; margin: 0; line-height: 1.2;",
+            headerSubtitle: "font-size: 18px; color: #64748b; margin-top: 5px;",
+            headerTextLeft: "text-align: left;",
+            printDate: "font-size: 14px; color: #94a3b8;",
+            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;",
+            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0;",
+            infoItemLast: "text-align: center; flex: 1;",
+            infoLabel: "font-size: 14px; color: #64748b; margin-bottom: 4px; display: block; font-weight: 500;",
+            infoValue: "font-size: 18px; font-weight: bold; color: #0f172a;",
+            table: "width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;",
+            th: "background-color: #1e293b; color: white; padding: 12px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;",
+            td: "padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle;",
+            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
+            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
+            footer: "margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; color: #94a3b8; font-size: 12px;"
+        };
+
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const imgWidth = 210; 
+        
+        let remainingStudents = [...managementAttendanceData];
+        let pageNum = 1;
+
+        try {
+            while (remainingStudents.length > 0) {
+                const rowsPerPage = pageNum === 1 ? 10 : 18;
+                const currentBatch = remainingStudents.slice(0, rowsPerPage);
+                remainingStudents = remainingStudents.slice(rowsPerPage);
+
+                const container = document.createElement('div');
+                container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
+                container.style.cssText += styles.container;
+
+                let htmlContent = `<div>`;
+
+                if (pageNum === 1) {
+                    htmlContent += `
+                        <div style="${styles.headerContainer}">
+                            <div style="${styles.headerTextRight}">
+                                <h1 style="${styles.headerTitle}">تقرير الحضور الشامل</h1>
+                            </div>
+                            <div style="${styles.headerTextLeft}">
+                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            </div>
+                        </div>
+
+                        <div style="${styles.infoCard}">
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">المقرر</span>
+                                <span style="${styles.infoValue}">${selectedLecture.courseName}</span>
+                            </div>
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">تاريخ المحاضرة</span>
+                                <span style="${styles.infoValue}">${selectedLecture.date}</span>
+                            </div>
+                            <div style="${styles.infoItem}">
+                                <span style="${styles.infoLabel}">التوقيت</span>
+                                <span style="${styles.infoValue}">${selectedLecture.timeSlot}</span>
+                            </div>
+                            <div style="${styles.infoItemLast}">
+                                <span style="${styles.infoLabel}">إحصائية الحضور</span>
+                                <span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    htmlContent += `<div style="height: 20px;"></div>`;
+                }
+
+                htmlContent += `
+                    <table style="${styles.table}">
+                        <thead>
+                            <tr>
+                                <th style="${styles.th}">#</th>
+                                <th style="${styles.th}">الرقم الجامعي</th>
+                                <th style="${styles.th}">اسم الطالب</th>
+                                <th style="${styles.th}">المجموعة</th>
+                                <th style="${styles.th}">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                currentBatch.forEach((student) => {
+                    const isAbsent = student.status === 'غائب';
+                    const globalIndex = managementAttendanceData.indexOf(student);
+                    const rowBg = globalIndex % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    const finalBg = isAbsent ? '#fff1f2' : rowBg; 
+                    
+                    let displayStatus = student.status;
+                    let badgeStyle = styles.statusAbsent;
+                    
+                    if (student.status === 'حاضر') {
+                         displayStatus = 'حاضر';
+                         badgeStyle = styles.statusPresent;
+                    }
+                    
+                    let statusBadge = `<span style="${badgeStyle}">${displayStatus}</span>`;
+                    
+                    if (student.record?.isOutsideRadius) {
+                        statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(تنبيه: خارج النطاق)</div>`;
+                    }
+
+                    htmlContent += `
+                        <tr style="background-color: ${finalBg};">
+                            <td style="${styles.td}">${student.serialNumber}</td>
+                            <td style="${styles.td} font-family: 'Tajawal', sans-serif;">${student.universityId}</td>
+                            <td style="${styles.td} text-align: right; padding-right: 20px;">${student.name}</td>
+                            <td style="${styles.td}">${student.groupName || '-'}</td>
+                            <td style="${styles.td}">${statusBadge}</td>
+                        </tr>
+                    `;
+                });
+
+                htmlContent += `</tbody></table>`;
+                htmlContent += `<div style="${styles.footer}">تم إنشاء هذا التقرير آلياً. - صفحة ${pageNum}</div></div>`; 
+
+                container.innerHTML = htmlContent;
+                document.body.appendChild(container);
+
+                const canvas = await html2canvas(container, { 
+                    scale: 1.2, 
+                    useCORS: true,
+                    logging: false,
+                    ignoreElements: (element: any) => element.id === 'root',
+                    onclone: (clonedDoc: any) => {
+                        const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
+                        links.forEach((link: any) => {
+                            if (!link.href.includes('fonts.googleapis.com')) {
+                                link.remove();
+                            }
+                        });
+                        const styles = clonedDoc.querySelectorAll('style');
+                        styles.forEach((style: any) => style.remove());
+                    }
+                });
+                const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfImgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+                if (pageNum > 1) {
+                    pdf.addPage();
+                }
+
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
+                document.body.removeChild(container);
+                
+                pageNum++;
+            }
+
+            pdf.save(`attendance-batch-${selectedLecture.courseName}-${selectedLecture.date}.pdf`);
+
+        } catch (error) {
+            console.error("Failed to generate PDF:", error);
+            alert("حدث خطأ أثناء إنشاء ملف PDF.");
+        } finally {
+            setIsExportingPdf(false);
+        }
+    };
+
+    // 💡 دالة تصدير PDF خاصة بـ "المجموعة" فقط (للقائد وللمشرف)
+    const handleGroupExportPdf = async () => {
+        const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId || l.id === selectedLectureId);
+        if (!selectedLecture || !activeGroup) return;
+
+        setIsGroupExportingPdf(true);
         try {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const container = document.createElement('div');
-            container.style.position = 'fixed';
-            container.style.top = '-9999px';
-            container.style.background = 'white';
-            container.style.padding = '40px';
-            container.style.width = '800px';
-            container.style.direction = 'rtl';
+            container.style.position = 'fixed'; container.style.top = '-9999px'; container.style.background = 'white'; container.style.padding = '40px'; container.style.width = '800px'; container.style.direction = 'rtl';
             
             let html = `
                 <div style="text-align:center; margin-bottom: 30px; font-family: sans-serif;">
@@ -371,13 +561,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             const canvas = await html2canvas(container, { scale: 1.5 });
             const imgData = canvas.toDataURL('image/jpeg', 0.9);
             pdf.addImage(imgData, 'JPEG', 10, 10, 190, (canvas.height * 190) / canvas.width);
-            pdf.save(`Attendance-${activeGroup.name}-${selectedLecture.date}.pdf`);
+            pdf.save(`Attendance-Group-${activeGroup.name}-${selectedLecture.date}.pdf`);
             document.body.removeChild(container);
         } catch (error) {
             console.error(error);
-            alert("حدث خطأ أثناء تصدير الـ PDF");
+            alert("حدث خطأ أثناء تصدير الـ PDF للمجموعة");
         } finally {
-            setIsExportingPdf(false);
+            setIsGroupExportingPdf(false);
         }
     };
 
@@ -413,7 +603,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         if (!student?.id) return [];
         const attendedLectureIds = new Set(attendanceRecords.filter(r => r.studentId === student.id).map(rec => rec.lectureId));
         return lectures.filter(lecture => {
-            // 💡 إزالة شرط الـ 15 دقيقة.. المحاضرة تعتبر غياب فوراً إذا لم يحضر الطالب
             return !attendedLectureIds.has(lecture.qrCode) && !attendedLectureIds.has(lecture.id);
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [lectures, attendanceRecords, student?.id]);
@@ -498,8 +687,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             return;
         }
         
-        // 💡 إشعار الليدر بنجاح الإنشاء وإغلاق النافذة دون الانضمام
-        alert('تم إنشاء المجموعة بنجاح! يمكنك إدارتها وربط الطلاب بها من قائمة (تحضير الدفعة).');
+        alert('تم إنشاء المجموعة بنجاح! يمكنك إدارتها وربط الطلاب بها من قائمة المجموعات.');
         if (onAddGroupLocal) onAddGroupLocal(newGroup.name);
         
         setCreateGroupModalOpen(false);
@@ -508,12 +696,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     const handleAddMembers = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!activeGroupId) return; // 👈 تعديل هنا
+        if (!activeGroupId) return;
         
         for (const memberId of selectedMemberIds) {
             const member = allStudents.find(s => s.id === memberId);
             if (member) {
-                onUpdateStudent(member.id, { groupId: activeGroupId }); // 👈 تعديل هنا
+                onUpdateStudent(member.id, { groupId: activeGroupId });
             }
         }
         
@@ -523,15 +711,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     const handleUpdateGroupName = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!activeGroupId || !editGroupName.trim()) return; // 👈 تعديل هنا
+        if (!activeGroupId || !editGroupName.trim()) return;
 
-        const { data: updatedGroup, error } = await updateGroup(activeGroupId, editGroupName); // 👈 تعديل هنا
+        const { data: updatedGroup, error } = await updateGroup(activeGroupId, editGroupName);
         if (error || !updatedGroup) {
             alert(error || 'فشل تحديث اسم المجموعة');
             return;
         }
 
-        onUpdateGroupName(activeGroupId, updatedGroup.name); // 👈 تعديل هنا
+        onUpdateGroupName(activeGroupId, updatedGroup.name);
         setEditGroupNameModalOpen(false);
     };
     
@@ -596,7 +784,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 رئيس مجموعة
                             </span>
                         )}
-                        {(student.canManageAttendance || student.isBatchLeader) && (
+                        {isBatchAdmin && (
                             <span className={`text-[10px] font-black px-2 sm:px-3 py-1 rounded-full border uppercase tracking-wider ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
                                 مشرف دفعة
                             </span>
@@ -604,47 +792,38 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     </div>
                 </div>
                 
-                {(!student.groupId || student.isLeader || student.groupId) && (
-                    <div className="bg-slate-900/40 p-1.5 rounded-[1.25rem] border border-slate-800/60 flex flex-row gap-1 w-full sm:w-auto shadow-xl overflow-x-auto custom-scrollbar">
-                        <TabButton 
-                            isActive={activeTab === 'personal'} 
-                            onClick={() => setActiveTab('personal')} 
-                            title="حسابي" 
-                            icon={<UsersIcon className="w-4 h-4"/>} 
-                            isRamadanMode={isRamadanMode}
-                        />
-                        <TabButton 
-                            isActive={activeTab === 'group'} 
-                            onClick={() => setActiveTab('group')} 
-                            title="تحضير المجموعة" 
-                            icon={<ClipboardListIcon className="w-4 h-4"/>} 
-                            isRamadanMode={isRamadanMode}
-                        />
-                        {(student.canManageAttendance || student.isBatchLeader) && (
-                            <TabButton 
-                                isActive={activeTab === 'management'} 
-                                onClick={() => setActiveTab('management')} 
-                                title="تحضير الدفعة" 
-                                icon={<EditIcon className="w-4 h-4"/>} 
-                                isRamadanMode={isRamadanMode}
-                            />
-                        )}
-                    </div>
-                )}  
-             </div>
-
-            {activeTab === 'personal' && (
-                <div className="space-y-6 sm:space-y-8 animate-fade-in">
-                    
-                    {/* 💡 مكون التنبيه الذكي الجديد للحرمان */}
-                    <AbsenceWarning 
-                        courses={courses}
-                        lectures={lectures}
-                        attendanceRecords={attendanceRecords}
-                        studentId={student.id}
+                {/* 💡 أزرار التبويبات تظهر للجميع حسب صلاحياتهم */}
+                <div className="bg-slate-900/40 p-1.5 rounded-[1.25rem] border border-slate-800/60 flex flex-row gap-1 w-full sm:w-auto shadow-xl overflow-x-auto custom-scrollbar">
+                    <TabButton 
+                        isActive={activeTab === 'personal'} 
+                        onClick={() => setActiveTab('personal')} 
+                        title="حسابي" 
+                        icon={<UsersIcon className="w-4 h-4"/>} 
                         isRamadanMode={isRamadanMode}
                     />
+                    <TabButton 
+                        isActive={activeTab === 'group'} 
+                        onClick={() => setActiveTab('group')} 
+                        title={isBatchAdmin ? "المجموعات" : "مجموعتي"} 
+                        icon={<ClipboardListIcon className="w-4 h-4"/>} 
+                        isRamadanMode={isRamadanMode}
+                    />
+                    {isBatchAdmin && (
+                        <TabButton 
+                            isActive={activeTab === 'management'} 
+                            onClick={() => setActiveTab('management')} 
+                            title="تحضير الدفعة" 
+                            icon={<EditIcon className="w-4 h-4"/>} 
+                            isRamadanMode={isRamadanMode}
+                        />
+                    )}
+                </div>
+             </div>
 
+            {/* تبويبة حسابي */}
+            {activeTab === 'personal' && (
+                <div className="space-y-6 sm:space-y-8 animate-fade-in">
+                    <AbsenceWarning courses={courses} lectures={lectures} attendanceRecords={attendanceRecords} studentId={student.id} isRamadanMode={isRamadanMode} />
                     <div className={`backdrop-blur-2xl border rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-10 shadow-2xl animate-slide-in-up transition-all duration-500 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6 mb-8 sm:mb-10">
                             <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>تسجيل الحضور</h2>
@@ -787,6 +966,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             )}
 
+            {/* 💡 تبويبة المجموعات الصارمة الصلاحيات */}
             {activeTab === 'group' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 animate-slide-in-up">
                     <div className="lg:col-span-2 space-y-6">
@@ -852,14 +1032,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                                             
-                                            {/* 💡 زر التصدير: يظهر لليدر الدفعة ولقائد المجموعة بشرط تحديد محاضرة */}
+                                            {/* 💡 التصدير: متاح لليدر الدفعة وقائد المجموعة */}
                                             {(student?.isLeader || isBatchAdmin) && selectedLectureId && (
-                                                <button onClick={handleGroupExportPdf} disabled={isExportingPdf} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu shadow-lg disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'}`}>
-                                                    {isExportingPdf ? 'جاري التصدير...' : 'تصدير PDF للمجموعة'}
+                                                <button onClick={handleGroupExportPdf} disabled={isGroupExportingPdf} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu shadow-lg disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'}`}>
+                                                    {isGroupExportingPdf ? 'جاري التصدير...' : 'تصدير PDF للمجموعة'}
                                                 </button>
                                             )}
 
-                                            {/* 💡 صلاحيات التعديل والإضافة: تظهر لليدر الدفعة (isBatchAdmin) فقط! */}
+                                            {/* 💡 التعديل والإضافة: متاحة لـ (ليدر الدفعة) فقط! */}
                                             {isBatchAdmin && (
                                                 <>
                                                     <button onClick={() => { setEditGroupName(activeGroup?.name || ''); setEditGroupNameModalOpen(true); }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
@@ -871,7 +1051,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                 </>
                                             )}
 
-                                            {/* 💡 زر المغادرة يظهر فقط إذا كان الشخص عضواً فعلياً في هذه المجموعة */}
+                                            {/* 💡 زر المغادرة للعضو الفعلي فقط */}
                                             {student?.groupId === activeGroupId && (
                                                 <button onClick={() => {
                                                     if (confirm('هل أنت متأكد من مغادرة المجموعة؟')) {
@@ -919,6 +1099,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                             <p className="text-white font-black text-base sm:text-lg">{member.name}</p>
                                                             {member.id === student?.id && <span className="bg-blue-500/20 text-blue-400 text-[8px] font-black px-2 py-0.5 rounded-full border border-blue-500/20">أنت</span>}
                                                             {member.tag && <span className="bg-purple-500/20 text-purple-400 text-[8px] font-black px-2 py-0.5 rounded-full border border-purple-500/20">{member.tag}</span>}
+                                                            {member.isLeader && <span className="bg-green-500/20 text-green-400 text-[8px] font-black px-2 py-0.5 rounded-full border border-green-500/20">قائد</span>}
                                                         </div>
                                                         <p className="text-gray-500 font-mono text-[10px] sm:text-xs mt-1">ID: {member.universityId}</p>
                                                     </div>
@@ -989,7 +1170,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             )}
 
-            {activeTab === 'management' && (student.canManageAttendance || student.isBatchLeader) && (
+            {/* 💡 تبويبة تحضير الدفعة (تبقى ليدر الدفعة فقط) */}
+            {activeTab === 'management' && isBatchAdmin && (
                 <div className="space-y-6 animate-fade-in">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-6">
@@ -1189,7 +1371,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         />
                         <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                             {allStudents
-                                .filter(s => s.id !== student.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery)))
+                                .filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery)))
                                 .map(s => (
                                     <div key={s.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
                                         <div>
@@ -1210,7 +1392,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         </button>
                                     </div>
                                 ))}
-                            {allStudents.filter(s => s.id !== student.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).length === 0 && (
+                            {allStudents.filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).length === 0 && (
                                 <div className="text-center py-4 text-gray-500 text-sm">لا يوجد طلاب متاحين للبحث</div>
                             )}
                         </div>
@@ -1307,7 +1489,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         </div>
                     )}
 
-                    {/* 💡 زرين منفصلين ومصممين بشكل فخم */}
                     <div className="flex flex-col gap-3 pt-4 border-t border-slate-700/50 mt-2">
                         <button 
                             type="submit" 

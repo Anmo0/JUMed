@@ -15,6 +15,7 @@ import {
   setAbsencePercentageSetting as apiSetAbsencePercentageSetting, clearAllAttendance as apiClearAllAttendance,
   clearAllLectures as apiClearAllLectures, recalculateAllSerialNumbers as apiRecalculateAllSerialNumbers,
   clearLectureAttendance as apiClearLectureAttendance
+  deleteGroup as apiDeleteGroup
 } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { useSession } from '../hooks/useSession';
@@ -84,6 +85,7 @@ interface AppContextType extends AppState {
   currentBatch: Batch | undefined;
   setBatches: React.Dispatch<React.SetStateAction<Batch[]>>;
   setCourses: React.Dispatch<React.SetStateAction<Course[]>>;
+  deleteGroupLocal: (groupId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -551,8 +553,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateGroupName, addGroupLocal, deleteAllGroupsLocal, generateQrCode, deleteLecture, manualAttendance, removeAttendance,
     recordAttendance, repeatPreviousAttendance, resetStudentDevice, resetAllDevices, updateAbsenceWeight, toggleDeviceBinding,
     toggleAbsencePercentage, toggleLocationRestriction, clearLectureAttendance, clearAllAttendance, clearAllLectures,
-    recalculateSerials, filteredStudents, filteredLectures, filteredAttendance, activeLecture, studentCourses, currentBatch, setBatches, setCourses,
+    recalculateSerials, filteredStudents, filteredLectures, filteredAttendance, activeLecture, studentCourses, currentBatch, setBatches, setCourses, deleteGroupLocal, 
   };
+
+  const deleteGroupLocal = useCallback(async (groupId: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه المجموعة؟ سيتم إخراج جميع الطلاب منها.')) return;
+    const { error } = await apiDeleteGroup(groupId);
+    if (error) { 
+        toast.error(error); 
+    } else {
+        updateState(prev => ({
+            groups: (prev.groups || []).filter(g => g.id !== groupId),
+            students: (prev.students || []).map(s => s.groupId === groupId ? { ...s, groupId: undefined, groupName: undefined, isLeader: false } : s)
+        }));
+        toast.success('تم حذف المجموعة بنجاح');
+    }
+  }, [updateState]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

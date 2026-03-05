@@ -66,6 +66,7 @@ interface AdminDashboardProps {
     locationRestrictionEnabled: boolean; 
     onToggleLocationRestriction: (enabled: boolean) => void; 
     onClearLectureAttendance: (lectureId: string) => void;
+    onDeleteGroupLocal: any;
 }
 
 const formatTimeToArabic = (time24: string) => {

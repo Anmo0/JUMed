@@ -935,6 +935,16 @@ export const deleteAllGroups = async (): Promise<MutationResult<null>> => {
     return { data: null, error: null };
 };
 
+export const deleteGroup = async (groupId: string): Promise<MutationResult<null>> => {
+    // إزالة ارتباط الطلاب بهذه المجموعة أولاً لتجنب الأخطاء
+    await supabase.from('students').update({ group_id: null }).eq('group_id', groupId);
+    const { error } = await supabase.from('groups').delete().eq('id', groupId);
+    if (error) {
+        return { data: null, error: `فشل حذف المجموعة: ${error.message}` };
+    }
+    return { data: null, error: null };
+};
+
 export const addAttendanceRecord = async (newRecord: Omit<AttendanceRecord, 'id'>): Promise<MutationResult<AttendanceRecord>> => {
     try {
         const { data: lecture } = await supabase.from('lectures').select('id').or(`id.eq.${newRecord.lectureId},qr_code.eq.${newRecord.lectureId}`).maybeSingle();

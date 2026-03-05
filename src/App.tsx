@@ -195,6 +195,7 @@ function AppContent() {
                             onClearLectureAttendance={clearLectureAttendance} onClearAllAttendance={clearAllAttendance} onClearAllLectures={clearAllLectures}
                             isRamadanMode={isRamadanMode} selectedBatchId={selectedBatchId} onResetBatch={handleResetBatch} onChangeBatch={selectBatch}
                             onRecalculateSerials={recalculateSerials} onRefreshStudents={refreshStudents}
+                            onDeleteGroupLocal={deleteGroupLocal}
                         />
                     ) : (
                         <StudentDashboard 
@@ -208,6 +209,7 @@ function AppContent() {
                             onRepeatPreviousAttendance={repeatPreviousAttendance} onClearLectureAttendance={clearLectureAttendance}
                             absencePercentageEnabled={absencePercentageEnabled} isRamadanMode={isRamadanMode}
                             groups={safeGroups}
+                            onDeleteGroupLocal={deleteGroupLocal}
                         />
                     )}
                 </React.Suspense>
