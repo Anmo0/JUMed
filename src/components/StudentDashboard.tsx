@@ -34,6 +34,7 @@ const formatTimeToArabic = (time24: string) => {
 interface StudentDashboardProps {
     student: Student;
     allStudents: Student[];
+    groups?: Group[]; // 👈 أضف هذا السطر
     attendanceRecords: AttendanceRecord[];
     onRecordAttendance: (location: { latitude: number; longitude: number }) => Promise<{ success: boolean, message: string }>;
     onManualAttendance: (studentId: string, lectureId: string) => void;
@@ -77,7 +78,8 @@ const TabButton: React.FC<{
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
     student, 
     allStudents,
-    attendanceRecords, 
+    groups, // 👈 أضف هذا
+    attendanceRecords,
     onRecordAttendance, 
     onManualAttendance,
     onRemoveAttendance,
@@ -97,10 +99,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [activeTab, setActiveTab] = useState<'personal' | 'group' | 'management'>(() => {
         return (sessionStorage.getItem('studentActiveTab') as any) || 'personal';
     });
+    const isBatchAdmin = student.canManageAttendance || student.isBatchLeader;
 
+    // 💡 حالات إدارة المجموعات لليدر
+    const [managementSelectedGroupId, setManagementSelectedGroupId] = useState<string | null>(null);
+    const activeGroupId = isBatchAdmin && managementSelectedGroupId ? managementSelectedGroupId : student.groupId;
+    const activeGroup = useMemo(() => groups?.find(g => g.id === activeGroupId) || {name: student.groupName}, [groups, activeGroupId, student.groupName]);
+    
     useEffect(() => {
         sessionStorage.setItem('studentActiveTab', activeTab);
     }, [activeTab]);
+    
     const [isScannerOpen, setScannerOpen] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -552,9 +561,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }, [lectures, attendanceRecords, student?.id]);
 
     const groupMembers = useMemo(() => {
-        if (!student?.groupId) return [];
-        return allStudents.filter(s => s.groupId === student.groupId).sort((a,b) => a.name.localeCompare(b.name));
-    }, [allStudents, student?.groupId]);
+        if (!activeGroupId) return [];
+        return allStudents.filter(s => s.groupId === activeGroupId).sort((a,b) => a.name.localeCompare(b.name));
+    }, [allStudents, activeGroupId]);
 
     const selectedLectureForGroup = useMemo(() => {
         return lectures.find(l => l.qrCode === selectedLectureId) || null;
@@ -641,12 +650,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     const handleAddMembers = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!student.groupId) return;
+        if (!activeGroupId) return; // 👈 تعديل هنا
         
         for (const memberId of selectedMemberIds) {
             const member = allStudents.find(s => s.id === memberId);
             if (member) {
-                onUpdateStudent(member.id, { groupId: student.groupId });
+                onUpdateStudent(member.id, { groupId: activeGroupId }); // 👈 تعديل هنا
             }
         }
         
@@ -656,15 +665,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     const handleUpdateGroupName = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!student.groupId || !editGroupName.trim()) return;
+        if (!activeGroupId || !editGroupName.trim()) return; // 👈 تعديل هنا
 
-        const { data: updatedGroup, error } = await updateGroup(student.groupId, editGroupName);
+        const { data: updatedGroup, error } = await updateGroup(activeGroupId, editGroupName); // 👈 تعديل هنا
         if (error || !updatedGroup) {
             alert(error || 'فشل تحديث اسم المجموعة');
             return;
         }
 
-        onUpdateGroupName(student.groupId, updatedGroup.name);
+        onUpdateGroupName(activeGroupId, updatedGroup.name); // 👈 تعديل هنا
         setEditGroupNameModalOpen(false);
     };
     
@@ -924,49 +933,91 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 animate-slide-in-up">
                     <div className="lg:col-span-2 space-y-6">
                         <div className={`backdrop-blur-2xl border rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-10 shadow-2xl transition-all duration-500 ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
-                            {!student.groupId ? (
-                                <div className="text-center py-8 sm:py-10">
+                            
+                            {/* 1. واجهة مشرف الدفعة لعرض جميع المجموعات */}
+                            {isBatchAdmin && !managementSelectedGroupId ? (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        <h2 className={`text-xl sm:text-2xl font-black flex items-center gap-2 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>
+                                            <UsersIcon className="w-6 h-6" /> إدارة مجموعات الدفعة
+                                        </h2>
+                                        <button onClick={() => setCreateGroupModalOpen(true)} className={`font-bold px-5 py-3 rounded-xl transition-all shadow-lg text-sm flex items-center gap-2 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                                            <span>+</span> إنشاء مجموعة
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                                        {groups?.map((group) => {
+                                            const mCount = allStudents.filter(s => s.groupId === group.id).length;
+                                            return (
+                                                <div key={group.id} className="p-5 bg-slate-800/40 hover:bg-slate-800/60 rounded-2xl border border-slate-700/50 flex flex-col gap-4 transition-all transform-gpu">
+                                                    <div className="flex justify-between items-start">
+                                                        <h3 className={`font-bold text-lg ${isRamadanMode ? 'text-yellow-400' : 'text-white'}`}>{group.name}</h3>
+                                                        <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold">{mCount} أعضاء</span>
+                                                    </div>
+                                                    <button onClick={() => setManagementSelectedGroupId(group.id)} className="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                                                        <EditIcon className="w-4 h-4" /> الدخول وإدارة المجموعة
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                        {(!groups || groups.length === 0) && (
+                                            <div className="col-span-full text-center py-10 bg-slate-800/20 rounded-2xl border border-dashed border-slate-700 text-gray-500">
+                                                لا توجد مجموعات في الدفعة حالياً. قم بإنشاء أول مجموعة!
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                            ) : (!activeGroupId ? (
+                                // 2. واجهة الطالب العادي الذي لا يملك مجموعة
+                                <div className="text-center py-8 sm:py-10 animate-fade-in">
                                     <UsersIcon className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-gray-500 mb-4" />
                                     <h2 className={`text-xl sm:text-2xl font-black mb-4 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>لست منضماً لأي مجموعة</h2>
-                                    <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base">
-                                        {student.isBatchLeader ? 'بصفتك رئيس الدفعة، يمكنك إنشاء مجموعة جديدة.' : 'يرجى التواصل مع رئيس الدفعة أو مشرف النظام لإضافتك إلى مجموعة.'}
+                                    <p className="text-gray-400 mb-6 text-sm sm:text-base">
+                                        يرجى التواصل مع رئيس الدفعة لإضافتك إلى مجموعة.
                                     </p>
-                                    {student.isBatchLeader && (
-                                        <button onClick={() => setCreateGroupModalOpen(true)} className={`font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all transform-gpu shadow-lg text-sm sm:text-base ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>إنشاء مجموعة جديدة</button>
-                                    )}
                                 </div>
                             ) : (
-                                <>
+                                // 3. واجهة عرض المجموعة المحددة (للطالب العادي أو الليدر الداخل إليها)
+                                <div className="animate-fade-in">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-10">
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                                            <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>إدارة المجموعة</h2>
-                                            {(student.isLeader || student.isBatchLeader) && (
-                                                <div className="flex flex-wrap items-center gap-2 w-full mt-3 sm:mt-0">
-                                                    <button onClick={() => { setEditGroupName(student.groupName || ''); setEditGroupNameModalOpen(true); }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
+                                        <div className="flex flex-col items-start gap-2 w-full sm:w-auto">
+                                            {isBatchAdmin && (
+                                                <button onClick={() => setManagementSelectedGroupId(null)} className="text-blue-400 text-xs font-bold hover:text-blue-300 flex items-center gap-1 mb-2 transition-all">
+                                                    &larr; العودة لجميع المجموعات
+                                                </button>
+                                            )}
+                                            <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>
+                                                {isBatchAdmin ? `مجموعة: ${activeGroup?.name || ''}` : 'إدارة المجموعة'}
+                                            </h2>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                            {(student.isLeader || isBatchAdmin) && (
+                                                <>
+                                                    <button onClick={() => { setEditGroupName(activeGroup?.name || ''); setEditGroupNameModalOpen(true); }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
                                                         تعديل الاسم
                                                     </button>
                                                     <button onClick={() => setAddMemberModalOpen(true)} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'}`}>
                                                         إضافة أعضاء
                                                     </button>
-                                                    <button onClick={() => {
-                                                        setManagementSelectedLectureId(selectedLectureId); 
-                                                        setTimeout(() => handleExportPdf(), 100);
-                                                    }} 
-                                                    disabled={!selectedLectureId || isExportingPdf}
-                                                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-yellow-600 text-slate-900' : 'bg-green-600/20 text-green-400 hover:bg-green-600 hover:text-white'}`}>
-                                                        {isExportingPdf ? 'جاري...' : 'تقرير PDF'}
-                                                    </button>
-                                                    <button onClick={() => {
-                                                        if (confirm('هل أنت متأكد من مغادرة المجموعة؟')) {
-                                                            onUpdateStudent(student.id, { groupId: undefined, groupName: undefined, isLeader: false });
-                                                        }
-                                                    }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
-                                                        مغادرة
-                                                    </button>
-                                                </div>
+                                                </>
+                                            )}
+                                            {/* زر المغادرة يظهر فقط إذا كان الشخص عضواً فعلياً في هذه المجموعة */}
+                                            {student.groupId === activeGroupId && (
+                                                <button onClick={() => {
+                                                    if (confirm('هل أنت متأكد من مغادرة المجموعة؟')) {
+                                                        onUpdateStudent(student.id, { groupId: undefined, groupName: undefined, isLeader: false });
+                                                    }
+                                                }} className={`flex-1 sm:flex-none text-xs sm:text-sm font-bold px-3 sm:px-4 py-2.5 rounded-xl transition-all transform-gpu ${isRamadanMode ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}>
+                                                    مغادرة
+                                                </button>
                                             )}
                                         </div>
-                                        <div className="w-full sm:w-64">
+                                    </div>
+
+                                    {(student.isLeader || isBatchAdmin) && (
+                                        <div className="mb-6 w-full sm:w-64">
                                             <select 
                                                 value={selectedLectureId || ''}
                                                 onChange={(e) => setSelectedLectureId(e.target.value)}
@@ -983,7 +1034,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                 )}
                                             </select>
                                         </div>
-                                    </div>
+                                    )}
 
                                     <div className="space-y-3 sm:space-y-4">
                                         {groupMembers.length > 0 ? groupMembers.map((member, index) => {
@@ -1023,7 +1074,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                 </button>
                                                             )}
                                                             
-                                                            {(student.isLeader || student.isBatchLeader) && member.id !== student.id && (
+                                                            {(student.isLeader || isBatchAdmin) && member.id !== student.id && (
                                                                 <button onClick={() => {
                                                                     if (confirm(`هل أنت متأكد من ${member.isLeader ? 'إلغاء تعيين' : 'تعيين'} ${member.name} كقائد للمجموعة؟`)) {
                                                                         onUpdateStudent(member.id, { isLeader: !member.isLeader });
@@ -1033,7 +1084,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                                                 </button>
                                                             )}
                                                             
-                                                            {selectedLectureId && (student.isLeader || student.isBatchLeader) && (
+                                                            {selectedLectureId && (student.isLeader || isBatchAdmin) && (
                                                                 isPresent ? (
                                                                     <button onClick={() => onRemoveAttendance(member.id, actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90">
                                                                         <XCircleIcon className="w-3.5 h-3.5"/> غياب
@@ -1052,15 +1103,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                             <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">لا يوجد أعضاء في هذه المجموعة</div>
                                         )}
                                     </div>
-                                </>
-                            )}
+                                </div>
+                            ))}
                         </div>
                     </div>
                     
                     <div className="lg:col-span-1">
                         <QRCodeDisplay 
                             activeLecture={selectedLectureForGroup} 
-                            onGenerateNew={(student.canManageAttendance || student.isBatchLeader) ? handleGenerateNewClick : undefined}
+                            onGenerateNew={(isBatchAdmin) ? handleGenerateNewClick : undefined}
                             title={selectedLectureForGroup ? "باركود المجموعة" : "لم يتم تحديد محاضرة"}
                             isRamadanMode={isRamadanMode}
                         />

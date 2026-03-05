@@ -200,12 +200,14 @@ function AppContent() {
                         <StudentDashboard 
                             student={safeStudents.find(s => s.id === currentUser?.id)!}
                             allStudents={safeStudents} attendanceRecords={safeAttendanceRecords}
+                            groups={safeGroups}
                             onRecordAttendance={recordAttendance} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
                             onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal}
                             activeLecture={activeLecture} lectures={safeLectures} courses={safeStudentCourses}
                             onGenerateQrCode={generateQrCode} onDeleteLecture={deleteLecture}
                             onRepeatPreviousAttendance={repeatPreviousAttendance} onClearLectureAttendance={clearLectureAttendance}
                             absencePercentageEnabled={absencePercentageEnabled} isRamadanMode={isRamadanMode}
+                            groups={safeGroups}
                         />
                     )}
                 </React.Suspense>
