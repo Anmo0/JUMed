@@ -319,14 +319,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
     const handleQrFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // 💡 قراءة أي زر تم الضغط عليه للتو
+        const isManualMode = (e.nativeEvent as any).submitter?.name === 'manualBtn';
+
         if (!selectedBatchId) {
-            alert('الرجاء اختيار الدفعة أولاً');
+            toast.error('الرجاء اختيار الدفعة أولاً');
             return;
         }
 
         const selectedCourse = courses.find(c => c.id === selectedCourseId);
         if (!selectedCourse) {
-            alert('الرجاء اختيار المقرر أولاً');
+            toast.error('الرجاء اختيار المقرر أولاً');
             return;
         }
 
@@ -339,14 +343,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             finalLectureName = `${selectedCourse.name} - محاضرة ${lectureCount}`;
         }
 
-        // 💡 إعداد تفاصيل المحاضرة مع خيار isManual
         const details = {
             date: qrForm.date,
             timeSlot: `${formatTimeToArabic(qrForm.startTime)} - ${formatTimeToArabic(qrForm.endTime)}`,
             courseName: finalLectureName,
             courseId: selectedCourse.id,
             batchId: selectedBatchId,
-            isManual: qrForm.isManual // 👈 الحقل الجديد هنا
+            isManual: isManualMode // 👈 نمرر القيمة هنا مباشرة
         };
 
         onGenerateQrCode(details, {
@@ -359,7 +362,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             onError: (message: string) => {
                 setIsCreatingQr(false);
                 setQrError(message);
-                alert(message);
+                toast.error(message);
             }
         });
     };
@@ -2102,26 +2105,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
-                        <input 
-                            id="isManual" 
-                            type="checkbox" 
-                            checked={qrForm.isManual} 
-                            onChange={(e) => setQrForm(p => ({...p, isManual: e.target.checked}))} 
-                            className="w-5 h-5 rounded-lg border-slate-600 bg-slate-700 text-blue-500 focus:ring-0 cursor-pointer"
-                        />
-                        <label htmlFor="isManual" className="text-sm font-bold text-gray-300 cursor-pointer select-none">
-                            محاضرة يدوية (بدون باركود وتتبع للموقع)
-                        </label>
+                    {/* 💡 زرين منفصلين ومصممين بشكل فخم */}
+                    <div className="flex flex-col gap-3 pt-4 border-t border-slate-700/50 mt-2">
+                        <button 
+                            type="submit" 
+                            name="qrBtn"
+                            disabled={isCreatingQr || !selectedCourseId} 
+                            className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-green-600/20 disabled:opacity-50"
+                        >
+                            {isCreatingQr ? 'جاري الإنشاء...' : 'بدء رصد الحضور بالباركود'}
+                        </button>
+                        <button 
+                            type="submit" 
+                            name="manualBtn"
+                            disabled={isCreatingQr || !selectedCourseId} 
+                            className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                        >
+                            {isCreatingQr ? 'جاري الإنشاء...' : 'إنشاء محاضرة يدوية (بدون باركود)'}
+                        </button>
                     </div>
-
-                    <button 
-                        type="submit" 
-                        disabled={isCreatingQr || !selectedCourseId} 
-                        className={`w-full py-4 text-white font-black rounded-2xl transition-all shadow-lg disabled:opacity-50 ${qrForm.isManual ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20' : 'bg-green-600 hover:bg-green-700 shadow-green-600/20'}`}
-                    >
-                        {isCreatingQr ? 'جاري الإنشاء...' : (qrForm.isManual ? 'إنشاء محاضرة يدوية' : 'بدء رصد الحضور بالباركود')}
-                    </button>
                 </form>
             </Modal>
 
