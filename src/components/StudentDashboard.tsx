@@ -444,9 +444,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     ignoreElements: (element: any) => element.id === 'root',
                     onclone: (clonedDoc: any) => {
                         const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
-                        links.forEach((link: any) => {
-                            if (!link.href.includes('fonts.googleapis.com')) link.remove();
-                        });
+                        links.forEach((link: any) => link.remove());
                         clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove());
                     }
                 });
@@ -546,6 +544,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 onclone: (clonedDoc: any) => {
                     const styles = clonedDoc.querySelectorAll('style');
                     styles.forEach((style: any) => style.remove());
+                    const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
+                    links.forEach((link: any) => link.remove());
                 }
             });
 

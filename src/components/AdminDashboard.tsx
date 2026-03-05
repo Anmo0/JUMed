@@ -1273,11 +1273,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         ignoreElements: (element: any) => element.id === 'root',
                         onclone: (clonedDoc: any) => {
                             const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
-                            links.forEach((link: any) => {
-                                if (!link.href.includes('fonts.googleapis.com')) {
-                                    link.remove();
-                                }
-                            });
+                            links.forEach((link: any) => link.remove());
                             const styles = clonedDoc.querySelectorAll('style');
                             styles.forEach((style: any) => style.remove());
                         }
