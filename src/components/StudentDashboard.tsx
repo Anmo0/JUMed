@@ -114,6 +114,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [isEditGroupNameModalOpen, setEditGroupNameModalOpen] = useState(false);
     const [editGroupName, setEditGroupName] = useState('');
     const [studentSearchQuery, setStudentSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(studentSearchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [studentSearchQuery]);
     const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
 
     // 💡 استخدام منتقي الوقت الجديد
@@ -1246,7 +1254,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         />
                         <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                             {allStudents
-                                .filter(s => s.id !== student.id && !s.groupId && (s.name.includes(studentSearchQuery) || s.universityId.includes(studentSearchQuery)))
+                                .filter(s => s.id !== student.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery)))
                                 .map(s => (
                                     <div key={s.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
                                         <div>
@@ -1267,7 +1275,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                         </button>
                                     </div>
                                 ))}
-                            {allStudents.filter(s => s.id !== student.id && !s.groupId && (s.name.includes(studentSearchQuery) || s.universityId.includes(studentSearchQuery))).length === 0 && (
+                            {allStudents.filter(s => s.id !== student.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).length === 0 && (
                                 <div className="text-center py-4 text-gray-500 text-sm">لا يوجد طلاب متاحين للبحث</div>
                             )}
                         </div>

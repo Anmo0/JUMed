@@ -27,6 +27,7 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 
 interface AdminDashboardProps {
     students: Student[];
@@ -146,6 +147,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     useEffect(() => {
         sessionStorage.setItem('adminActiveTab', activeTab);
     }, [activeTab]);
+
+    const [animationParent] = useAutoAnimate();
     const [isPromoteModalOpen, setPromoteModalOpen] = useState(false);
     const [isPromoting, setIsPromoting] = useState(false);
     const [showUndoPromotion, setShowUndoPromotion] = useState(false);
@@ -251,6 +254,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const [groupName, setGroupName] = useState('');
     const [selectedGroupStudentIds, setSelectedGroupStudentIds] = useState<Set<string>>(new Set());
     const [studentSearchQuery, setStudentSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(studentSearchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [studentSearchQuery]);
     const [isExportingPdf, setIsExportingPdf] = useState(false);
     const [isAddBatchModalOpen, setAddBatchModalOpen] = useState(false);
     const [newBatchName, setNewBatchName] = useState('');
@@ -2231,8 +2242,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         <div className="max-h-72 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-slate-700">
                             {students
                                 .filter(s => 
-                                    s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) || 
-                                    s.universityId.includes(studentSearchQuery)
+                                    s.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) || 
+                                    s.universityId.includes(debouncedSearchQuery)
                                 )
                                 .map(student => {
                                     const isSelected = selectedGroupStudentIds.has(student.id);
