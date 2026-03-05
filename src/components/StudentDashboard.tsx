@@ -301,6 +301,23 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }).sort((a, b) => (Number(a.serialNumber) || 0) - (Number(b.serialNumber) || 0)); // 💡 ترتيب آمن
     }, [allStudents, attendanceRecords, managementSelectedLectureId, lectures]);
 
+    const hasAttendedCurrentLecture = useMemo(() => {
+        if (!activeLecture || !student) return false;
+        return attendanceRecords.some(r => (r.lectureId === activeLecture.qrCode || r.lectureId === activeLecture.id) && r.studentId === student.id);
+    }, [activeLecture, student, attendanceRecords]);
+
+    const missedLectures = useMemo(() => {
+        if (!student) return [];
+        return lectures.filter(l => {
+            // Don't count the active lecture as missed
+            if (activeLecture && (l.qrCode === activeLecture.qrCode || l.id === activeLecture.id)) return false;
+            
+            // Check if attended
+            const isAttended = attendanceRecords.some(r => (r.lectureId === l.qrCode || r.lectureId === l.id) && r.studentId === student.id);
+            return !isAttended;
+        }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }, [lectures, attendanceRecords, student, activeLecture]);
+
     const handleExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId || l.id === managementSelectedLectureId);
         if (!selectedLecture) return;
@@ -371,7 +388,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             </div>
                             <div style="${styles.infoItemLast}">
                                 <span style="${styles.infoLabel}">إحصائية الحضور</span>
-                                <span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span>
+                                <span style="${styles.infoValue} color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span>
                             </div>
                         </div>
                     `;
@@ -428,6 +445,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     scale: 1.2, 
                     useCORS: true,
                     logging: false,
+                    backgroundColor: '#ffffff',
                     ignoreElements: (element: any) => element.id === 'root',
                     onclone: (clonedDoc: any) => {
                         const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
@@ -449,6 +467,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             pdf.save(`attendance-batch-${selectedLecture.courseName}-${selectedLecture.date}.pdf`);
             toast.success("تم التصدير بنجاح");
         } catch (error) {
+            console.error(error);
             toast.error("حدث خطأ أثناء إنشاء ملف PDF.");
         } finally {
             setIsExportingPdf(false);
@@ -514,7 +533,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             html += `</table>`;
             container.innerHTML = html; document.body.appendChild(container);
 
-            const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, logging: false, ignoreElements: (element: any) => element.id === 'root', onclone: (clonedDoc: any) => { clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove()); } });
+            const canvas = await html2canvas(container, { 
+                scale: 1.5, 
+                useCORS: true, 
+                logging: false, 
+                backgroundColor: '#ffffff',
+                ignoreElements: (element: any) => element.id === 'root', 
+                onclone: (clonedDoc: any) => { clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove()); } 
+            });
             const imgData = canvas.toDataURL('image/jpeg', 0.9);
             const imgProps = pdf.getImageProperties(imgData);
             const pdfImgHeight = (imgProps.height * 190) / imgProps.width; 
@@ -524,6 +550,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             document.body.removeChild(container);
             toast.success("تم تصدير الـ PDF بنجاح");
         } catch (error) {
+            console.error(error);
             toast.error("حدث خطأ أثناء تصدير الـ PDF للمجموعة.");
         } finally {
             setIsGroupExportingPdf(false);
