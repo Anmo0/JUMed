@@ -370,6 +370,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <div style="${styles.headerContainer}">
                             <div style="${styles.headerTextRight}">
                                 <h1 style="${styles.headerTitle}">تقرير الحضور الشامل</h1>
+                                <p style="${styles.headerSubtitle}">السنة ${currentBatch?.currentYear || ''} - ${currentBatch?.batchName || ''}</p>
                             </div>
                             <div style="${styles.headerTextLeft}">
                                 <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -494,43 +495,44 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
         setIsGroupExportingPdf(true);
         const actualLectureId = selectedLecture.id || selectedLecture.qrCode;
-        const attendanceCount = groupMembers.filter(m => attendanceRecords.some(r => r.studentId === m.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId))).length;
+        const attendanceCount = groupMembers.filter(m => 
+            attendanceRecords.some(r => r.studentId === m.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId))
+        ).length;
 
         const styles = {
-            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', serif; color: #1e293b; box-sizing: border-box;",
-            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px;",
+            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', serif; color: #1e293b;",
+            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 30px;",
             headerTextRight: "text-align: right;",
-            headerTitle: "font-size: 32px; font-weight: bold; color: #1e293b; margin: 0; line-height: 1.2;",
-            headerSubtitle: "font-size: 18px; color: #64748b; margin-top: 5px;",
+            headerTitle: "font-size: 28px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0; line-height: 1.4;", // 💡 تم زيادة المارجن هنا
+            headerSubtitle: "font-size: 18px; color: #64748b; margin: 5px 0 0 0;", // 💡 تنسيق السنة والشعبة
             headerTextLeft: "text-align: left;",
             printDate: "font-size: 14px; color: #94a3b8;",
-            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;",
-            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0;",
-            infoItemLast: "text-align: center; flex: 1;",
-            infoLabel: "font-size: 14px; color: #64748b; margin-bottom: 4px; display: block; font-weight: 500;",
-            infoValue: "font-size: 18px; font-weight: bold; color: #0f172a;",
+            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 25px; display: flex; justify-content: space-between;",
+            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column;",
+            infoItemLast: "text-align: center; flex: 1; display: flex; flex-direction: column;",
+            infoLabel: "font-size: 12px; color: #64748b; margin-bottom: 5px;",
+            infoValue: "font-size: 16px; font-weight: bold; color: #0f172a;",
             table: "width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;",
-            th: "background-color: #1e293b; color: white; padding: 12px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;",
-            td: "padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle;",
-            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 2px 10px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            footer: "margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; color: #94a3b8; font-size: 12px;"
+            th: "background-color: #1e293b; color: white; padding: 12px; text-align: center;",
+            td: "padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;",
+            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 2px 10px; border-radius: 9999px;",
+            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 2px 10px; border-radius: 9999px;",
+            footer: "margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; color: #94a3b8; font-size: 12px;"
         };
 
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const imgWidth = 210; 
-        
         let remainingStudents = [...groupMembers];
         let pageNum = 1;
 
         try {
             while (remainingStudents.length > 0) {
-                const rowsPerPage = pageNum === 1 ? 10 : 18;
+                const rowsPerPage = pageNum === 1 ? 12 : 18;
                 const currentBatchStudents = remainingStudents.slice(0, rowsPerPage);
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
+                container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px';
                 container.style.cssText += styles.container;
 
                 let htmlContent = `<div>`;
@@ -539,109 +541,34 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <div style="${styles.headerContainer}">
                             <div style="${styles.headerTextRight}">
                                 <h1 style="${styles.headerTitle}">تقرير حضور مجموعة: ${activeGroup.name}</h1>
-                                <p style="${styles.headerSubtitle}">${currentBatch?.batchName || ''} ${currentBatch?.currentYear ? `| السنة ${currentBatch.currentYear}` : ''}</p>
+                                <p style="${styles.headerSubtitle}">السنة ${currentBatch?.currentYear || ''} - ${currentBatch?.batchName || ''}</p>
                             </div>
                             <div style="${styles.headerTextLeft}">
-                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
                         <div style="${styles.infoCard}">
-                            <div style="${styles.infoItem}">
-                                <span style="${styles.infoLabel}">المقرر</span>
-                                <span style="${styles.infoValue}">${selectedLecture.courseName}</span>
-                            </div>
-                            <div style="${styles.infoItem}">
-                                <span style="${styles.infoLabel}">تاريخ المحاضرة</span>
-                                <span style="${styles.infoValue}">${selectedLecture.date}</span>
-                            </div>
-                            <div style="${styles.infoItem}">
-                                <span style="${styles.infoLabel}">التوقيت</span>
-                                <span style="${styles.infoValue}">${selectedLecture.timeSlot}</span>
-                            </div>
-                            <div style="${styles.infoItemLast}">
-                                <span style="${styles.infoLabel}">إحصائية الحضور</span>
-                                <span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span>
-                            </div>
+                            <div style="${styles.infoItem}"><span style="${styles.infoLabel}">المقرر</span><span style="${styles.infoValue}">${selectedLecture.courseName}</span></div>
+                            <div style="${styles.infoItem}"><span style="${styles.infoLabel}">التاريخ</span><span style="${styles.infoValue}">${selectedLecture.date}</span></div>
+                            <div style="${styles.infoItemLast}"><span style="${styles.infoLabel}">نسبة حضور المجموعة</span><span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span></div>
                         </div>
                     `;
-                } else {
-                    htmlContent += `<div style="height: 20px;"></div>`;
                 }
-
-                htmlContent += `
-                    <table style="${styles.table}">
-                        <thead>
-                            <tr>
-                                <th style="${styles.th}">#</th>
-                                <th style="${styles.th}">الرقم الجامعي</th>
-                                <th style="${styles.th}">اسم الطالب</th>
-                                <th style="${styles.th}">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                currentBatchStudents.forEach((member, index) => {
-                    const isPresent = attendanceRecords.some(r => r.studentId === member.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId));
-                    const isOutsideRadius = attendanceRecords.find(r => r.studentId === member.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId))?.isOutsideRadius;
-                    
-                    const displayStatus = isPresent ? 'حاضر' : 'غائب';
-                    const badgeStyle = isPresent ? styles.statusPresent : styles.statusAbsent;
-                    let statusBadge = `<span style="${badgeStyle}">${displayStatus}</span>`;
-                    
-                    if (isOutsideRadius) {
-                        statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(تنبيه: خارج النطاق)</div>`;
-                    }
-
-                    const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
-                    const finalBg = !isPresent ? '#fff1f2' : rowBg; 
-
-                    htmlContent += `
-                        <tr style="background-color: ${finalBg};">
-                            <td style="${styles.td}">${member.serialNumber}</td>
-                            <td style="${styles.td} font-family: 'Tajawal', sans-serif;">${member.universityId}</td>
-                            <td style="${styles.td} text-align: right; padding-right: 20px;">${member.name}</td>
-                            <td style="${styles.td}">${statusBadge}</td>
-                        </tr>
-                    `;
+                htmlContent += `<table style="${styles.table}"><thead><tr><th style="${styles.th}">#</th><th style="${styles.th}">الرقم الجامعي</th><th style="${styles.th}">الاسم</th><th style="${styles.th}">الحالة</th></tr></thead><tbody>`;
+                currentBatchStudents.forEach((m) => {
+                    const isPresent = attendanceRecords.some(r => r.studentId === m.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId));
+                    htmlContent += `<tr><td style="${styles.td}">${m.serialNumber}</td><td style="${styles.td}">${m.universityId}</td><td style="${styles.td} text-align:right;">${m.name}</td><td style="${styles.td}"><span style="${isPresent ? styles.statusPresent : styles.statusAbsent}">${isPresent ? 'حاضر' : 'غائب'}</span></td></tr>`;
                 });
-
-                htmlContent += `</tbody></table>`;
-                htmlContent += `<div style="${styles.footer}">تم إنشاء هذا التقرير آلياً. - صفحة ${pageNum}</div></div>`; 
-
-                container.innerHTML = htmlContent;
-                document.body.appendChild(container);
-
-                const canvas = await html2canvas(container, { 
-                    scale: 1.2, 
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    ignoreElements: (element: any) => element.id === 'root',
-                    onclone: (clonedDoc: any) => {
-                        const links = clonedDoc.querySelectorAll('link[rel="stylesheet"]');
-                        links.forEach((link: any) => link.remove());
-                        clonedDoc.querySelectorAll('style').forEach((style: any) => style.remove());
-                    }
-                });
-                
-                const imgData = canvas.toDataURL('image/jpeg', 0.8);
-                const imgProps = pdf.getImageProperties(imgData);
-                const pdfImgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
+                htmlContent += `</tbody></table><div style="${styles.footer}">تم إنشاء هذا التقرير آلياً. - صفحة ${pageNum}</div></div>`;
+                container.innerHTML = htmlContent; document.body.appendChild(container);
+                const canvas = await html2canvas(container, { scale: 1.2, useCORS: true, backgroundColor: '#ffffff' });
                 if (pageNum > 1) pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
-                document.body.removeChild(container);
-                pageNum++;
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+                document.body.removeChild(container); pageNum++;
             }
-            pdf.save(`Attendance-Group-${activeGroup.name}-${selectedLecture.date}.pdf`);
+            pdf.save(`Attendance-Group-${activeGroup.name}.pdf`);
             toast.success("تم تصدير الـ PDF بنجاح");
-        } catch (error) {
-            console.error(error);
-            toast.error("حدث خطأ أثناء التصدير.");
-        } finally {
-            setIsGroupExportingPdf(false);
-        }
+        } catch (error) { toast.error("حدث خطأ أثناء التصدير."); } finally { setIsGroupExportingPdf(false); }
     };
 
     useEffect(() => {

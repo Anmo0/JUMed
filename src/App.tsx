@@ -195,10 +195,11 @@ function AppContent() {
                     ) : (
                         <StudentDashboard 
                             student={safeStudents.find(s => s.id === currentUser?.id)!}
-                            allStudents={safeStudents} attendanceRecords={safeAttendanceRecords}
+                            allStudents={safeStudents} 
+                            attendanceRecords={safeAttendanceRecords}
                             groups={safeGroups}
-                            currentBatch={currentBatch} // 👈 أضف هذا السطر فقط
-                            onRecordAttendance={recordAttendance} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
+                            currentBatch={currentBatch} // 👈 تأكد من إضافة هذا السطر ليمرر "كائن" الدفعة
+                            onRecordAttendance={recordAttendance}
                             onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal} onDeleteGroupLocal={deleteGroupLocal}
                             activeLecture={activeLecture} lectures={safeLectures} courses={safeStudentCourses}
                             onGenerateQrCode={generateQrCode} onDeleteLecture={deleteLecture}
