@@ -384,8 +384,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                // 💡 استخدام إعدادات CSS آمنة تماماً تمنع انهيار html2canvas
-                container.style.cssText = "position: absolute; left: -9999px; top: 0; width: 794px; padding: 40px; background-color: #ffffff; direction: rtl; font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #1e293b; box-sizing: border-box;";
+                // 💡 التعديل الجذري الأول: إبقاء العنصر في الشاشة ولكن في الخلفية لمنع الانهيار
+                container.style.cssText = "position: fixed; left: 0; top: 0; z-index: -9999; width: 794px; padding: 40px; background-color: #ffffff; direction: rtl; font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #1e293b; box-sizing: border-box;";
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
@@ -451,18 +451,27 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 container.innerHTML = htmlContent;
                 document.body.appendChild(container);
 
+                // 💡 التعديل الجذري الثاني: الانتظار 100 ملي ثانية لضمان قيام المتصفح برسم الجدول قبل التصوير
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 const canvas = await html2canvas(container, { 
-                    scale: 2, // دقة عالية لخط أوضح
+                    scale: 2, 
                     useCORS: true,
                     logging: false,
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    windowWidth: 794,
+                    onclone: (clonedDoc) => {
+                        clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
+                        const root = clonedDoc.getElementById('root');
+                        if (root) root.style.display = 'none';
+                    }
                 });
                 
                 const imgData = canvas.toDataURL('image/jpeg', 1.0);
                 const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
 
                 if (pageNum > 1) pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight);
                 document.body.removeChild(container);
                 pageNum++;
             }
@@ -473,7 +482,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             toast.error("حدث خطأ أثناء التصدير. يرجى المحاولة مجدداً.");
         } finally {
             setIsExportingPdf(false);
-            document.querySelectorAll('div[style*="left: -9999px"]').forEach(e => e.remove()); // تنظيف آمن
+            // تنظيف الحاويات بأمان
+            document.querySelectorAll('div[style*="z-index: -9999"]').forEach(e => e.remove());
         }
     };
 
@@ -506,7 +516,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                container.style.cssText = "position: absolute; left: -9999px; top: 0; width: 794px; padding: 40px; background-color: #ffffff; direction: rtl; font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #1e293b; box-sizing: border-box;";
+                container.style.cssText = "position: fixed; left: 0; top: 0; z-index: -9999; width: 794px; padding: 40px; background-color: #ffffff; direction: rtl; font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #1e293b; box-sizing: border-box;";
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
@@ -570,18 +580,27 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 container.innerHTML = htmlContent; 
                 document.body.appendChild(container);
 
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // 💡 عزل وحذف ملفات الـ CSS الحديثة (oklch) لمنع انهيار مكتبة التصوير
                 const canvas = await html2canvas(container, { 
                     scale: 2, 
                     useCORS: true, 
                     logging: false, 
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    windowWidth: 794,
+                    onclone: (clonedDoc) => {
+                        clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
+                        const root = clonedDoc.getElementById('root');
+                        if (root) root.style.display = 'none';
+                    }
                 });
 
                 const imgData = canvas.toDataURL('image/jpeg', 1.0);
                 const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
 
                 if (pageNum > 1) pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight);
                 document.body.removeChild(container); 
                 pageNum++;
             }
@@ -592,7 +611,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             toast.error("حدث خطأ أثناء تصدير الـ PDF للمجموعة.");
         } finally {
             setIsGroupExportingPdf(false);
-            document.querySelectorAll('div[style*="left: -9999px"]').forEach(e => e.remove());
+            document.querySelectorAll('div[style*="z-index: -9999"]').forEach(e => e.remove());
         }
     };
     
@@ -1131,6 +1150,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             )}
 
             {/* النوافذ المنبثقة الجديدة لليدر */}
+            {/* نافذة مغادرة المجموعة */}
             <Modal isOpen={isLeaveGroupModalOpen} onClose={() => setLeaveGroupModalOpen(false)} title="مغادرة المجموعة" isRamadanMode={isRamadanMode}>
                 <div className="text-center p-4">
                     <AlertTriangleIcon className="mx-auto h-16 w-16 text-red-500 mb-4" />
@@ -1138,7 +1158,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div className="mt-8 flex gap-3">
                         <button onClick={() => setLeaveGroupModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
                         <button onClick={() => {
-                            onUpdateStudent(student.id, { groupId: undefined, groupName: undefined, isLeader: false });
+                            // 💡 استخدام null بدل undefined لضمان مسح البيانات من قاعدة البيانات
+                            onUpdateStudent(student.id, { groupId: null as any, groupName: null as any, isLeader: false });
                             setLeaveGroupModalOpen(false);
                             toast.success('تمت المغادرة بنجاح');
                         }} className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-2xl text-white font-bold transition-all transform-gpu">مغادرة</button>
@@ -1146,6 +1167,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             </Modal>
 
+            {/* نافذة تعيين القائد (موجودة بينهما) */}
             <Modal isOpen={isAssignLeaderModalOpen} onClose={() => setAssignLeaderModalOpen(false)} title="إدارة الصلاحيات" isRamadanMode={isRamadanMode}>
                 <div className="text-center p-4">
                     <UsersIcon className="mx-auto h-16 w-16 text-blue-500 mb-4" />
@@ -1163,6 +1185,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             </Modal>
 
+            {/* نافذة إزالة طالب */}
             <Modal isOpen={isRemoveMemberModalOpen} onClose={() => setRemoveMemberModalOpen(false)} title="إزالة طالب" isRamadanMode={isRamadanMode}>
                 <div className="text-center p-4">
                     <TrashIcon className="mx-auto h-16 w-16 text-red-500 mb-4" />
@@ -1171,7 +1194,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <button onClick={() => setRemoveMemberModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
                         <button onClick={() => {
                             if (memberToRemove) {
-                                onUpdateStudent(memberToRemove.id, { groupId: undefined, groupName: undefined, isLeader: false });
+                                // 💡 استخدام null لضمان حذف الطالب من المجموعة فعلياً
+                                onUpdateStudent(memberToRemove.id, { groupId: null as any, groupName: null as any, isLeader: false });
                                 toast.success('تم إزالة الطالب بنجاح');
                             }
                             setRemoveMemberModalOpen(false);
