@@ -67,6 +67,10 @@ function AppContent() {
 
         localStorage.setItem('anmo_current_user', JSON.stringify(result.user));
         
+        // 💡 التعديل هنا: مسح التبويبة المحفوظة مسبقاً لضمان فتح "لوحة التحكم" دائماً عند تسجيل الدخول
+        sessionStorage.removeItem('adminActiveTab');
+        sessionStorage.removeItem('studentActiveTab');
+        
         if (result.user && result.user.role === UserRole.Student && result.user.batchId) {
             selectBatch(result.user.batchId);
         }
@@ -76,6 +80,9 @@ function AppContent() {
     const handleLogout = async () => {
         await signOut();
         selectBatch(null);
+        // 💡 التعديل هنا: مسح التبويبات عند تسجيل الخروج أيضاً
+        sessionStorage.removeItem('adminActiveTab');
+        sessionStorage.removeItem('studentActiveTab');
     };
 
     const handleResetBatch = () => { selectBatch(null); };
