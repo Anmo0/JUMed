@@ -320,17 +320,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.selectedBatchId, user, updateState]);
 
   const deleteGroupLocal = useCallback(async (groupId: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه المجموعة؟ سيتم إخراج جميع الطلاب منها.')) return;
-    const { error } = await apiDeleteGroup(groupId);
-    if (error) { 
-        toast.error(error); 
-    } else {
-        updateState(prev => ({
-            groups: (prev.groups || []).filter(g => g.id !== groupId),
-            students: (prev.students || []).map(s => s.groupId === groupId ? { ...s, groupId: undefined, groupName: undefined, isLeader: false } : s)
-        }));
-        toast.success('تم حذف المجموعة بنجاح');
-    }
+    // 💡 استخدام إشعار (Toast) مخصص وأنيق بدلاً من نافذة المتصفح المزعجة (window.confirm)
+    toast((t) => (
+      <div className="flex flex-col gap-3 text-right" style={{ direction: 'rtl' }}>
+        <div>
+          <p className="font-bold text-slate-800 text-base">هل أنت متأكد من حذف هذه المجموعة؟</p>
+          <p className="text-xs text-slate-500 mt-1">سيتم إخراج جميع الطلاب منها، ولا يمكن التراجع.</p>
+        </div>
+        <div className="flex gap-2 mt-1">
+          <button 
+            onClick={async () => {
+              toast.dismiss(t.id); // إخفاء الإشعار فوراً
+              const { error } = await apiDeleteGroup(groupId);
+              if (error) { 
+                  toast.error(error); 
+              } else {
+                  updateState(prev => ({
+                      groups: (prev.groups || []).filter(g => g.id !== groupId),
+                      students: (prev.students || []).map(s => s.groupId === groupId ? { ...s, groupId: undefined, groupName: undefined, isLeader: false } : s)
+                  }));
+                  toast.success('تم حذف المجموعة بنجاح');
+              }
+            }} 
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-xl text-sm font-bold transition-all"
+          >
+            تأكيد الحذف
+          </button>
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-2 rounded-xl text-sm font-bold transition-all"
+          >
+            إلغاء
+          </button>
+        </div>
+      </div>
+    ), { duration: 6000, position: 'top-center', id: `delete-group-${groupId}` });
   }, [updateState]);
 
   const deleteAllGroupsLocal = useCallback(() => {
