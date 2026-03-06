@@ -59,7 +59,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onDismissError, isRamadan
                                 onChange={(e) => setUniversityId(e.target.value)}
                                 required
                                 className={`w-full px-4 py-2.5 bg-slate-800/50 border rounded-lg shadow-sm focus:outline-none transition-all duration-200 transform-gpu text-white placeholder-gray-400 ${isRamadanMode ? 'border-yellow-500/30 focus:ring-yellow-500 focus:border-yellow-500' : 'border-slate-700 focus:ring-blue-500 focus:border-blue-500'}`}
-                                placeholder={userType === 'admin' ? 'admin@example.com' : 'مثال: 44123456'}
+                                placeholder={userType === 'admin' ? 'admin@example.com' : 'مثال: 2020202020'}
                             />
                         </div>
                         <div>
