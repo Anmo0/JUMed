@@ -320,45 +320,24 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [lectures, attendanceRecords, student, activeLecture]);
 
-    // 💡 دالة ذكية لتحويل بيانات الدفعة للصيغة المطلوبة (مثل: السنة السادسة - شعبة الطالبات)
-    const getBatchLabel = (batch?: Batch) => {
-        if (!batch) return '';
+    // 💡 دالة ذكية تحول بيانات الدفعة لعنوان رسمي (مثال: السنة السادسة - شعبة الطالبات)
+    const getBatchLabel = () => {
+        if (!currentBatch) return '';
         const yearNames = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة'];
-        const yearStr = batch.currentYear && batch.currentYear >= 1 && batch.currentYear <= 7 
-            ? yearNames[batch.currentYear - 1] 
-            : (batch.currentYear || '');
-        const section = batch.batchName.includes('طالبات') ? 'شعبة الطالبات' : 'شعبة الطلاب';
+        const yearStr = currentBatch.currentYear && currentBatch.currentYear >= 1 && currentBatch.currentYear <= 7 
+            ? yearNames[currentBatch.currentYear - 1] 
+            : (currentBatch.currentYear || '');
+        const section = currentBatch.batchName.includes('طالبات') ? 'شعبة الطالبات' : 'شعبة الطلاب';
         return `السنة ${yearStr} - ${section}`;
     };
 
+    // 📄 دالة تصدير تقرير الدفعة الشامل
     const handleExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId || l.id === managementSelectedLectureId);
         if (!selectedLecture) return;
 
         setIsExportingPdf(true);
         const attendanceCount = managementAttendanceData.filter(s => s.status !== 'غائب').length;
-
-        const styles = {
-            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', sans-serif; color: #1e293b; box-sizing: border-box;",
-            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;",
-            headerTextRight: "text-align: right;",
-            headerTitle: "font-size: 28px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0; line-height: 1.2;",
-            headerSubtitle: "font-size: 18px; color: #64748b; margin: 0; font-weight: 500;",
-            headerTextLeft: "text-align: left;",
-            printDate: "font-size: 14px; color: #94a3b8; margin: 0;",
-            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;",
-            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0;",
-            infoItemLast: "text-align: center; flex: 1;",
-            infoLabel: "font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;",
-            infoValue: "font-size: 18px; font-weight: bold; color: #0f172a;",
-            table: "width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;",
-            th: "background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;",
-            td: "padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle;",
-            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            footer: "margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; color: #94a3b8; font-size: 12px;"
-        };
-
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const imgWidth = 210; 
         let remainingStudents = [...managementAttendanceData];
@@ -366,81 +345,98 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
         try {
             while (remainingStudents.length > 0) {
-                const rowsPerPage = pageNum === 1 ? 10 : 18;
-                const currentBatchStudents = remainingStudents.slice(0, rowsPerPage);
+                const rowsPerPage = pageNum === 1 ? 12 : 18;
+                const pageBatch = remainingStudents.slice(0, rowsPerPage);
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
-                container.style.cssText += styles.container;
+                // 💡 عزل الحاوية بالكامل لمنع التداخلات وانهيار الـ Canvas
+                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: sans-serif; color: #1e293b; box-sizing: border-box;');
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
                     htmlContent += `
-                        <div style="${styles.headerContainer}">
-                            <div style="${styles.headerTextRight}">
-                                <h1 style="${styles.headerTitle}">تقرير حضور شامل</h1>
-                                <p style="${styles.headerSubtitle}">${getBatchLabel(currentBatch)}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;">
+                            <div style="text-align: right;">
+                                <h1 style="font-size: 28px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير حضور شامل</h1>
+                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 500;">${getBatchLabel()}</p>
                             </div>
-                            <div style="${styles.headerTextLeft}">
-                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <div style="text-align: left;">
+                                <p style="font-size: 14px; color: #94a3b8; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
-                        <div style="${styles.infoCard}">
-                            <div style="${styles.infoItem}"><span style="${styles.infoLabel}">المقرر</span><span style="${styles.infoValue}">${selectedLecture.courseName}</span></div>
-                            <div style="${styles.infoItem}"><span style="${styles.infoLabel}">تاريخ المحاضرة</span><span style="${styles.infoValue}">${selectedLecture.date}</span></div>
-                            <div style="${styles.infoItem}"><span style="${styles.infoLabel}">التوقيت</span><span style="${styles.infoValue}">${selectedLecture.timeSlot}</span></div>
-                            <div style="${styles.infoItemLast}"><span style="${styles.infoLabel}">إحصائية الحضور</span><span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span></div>
+                        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">التوقيت</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.timeSlot}</span></div>
+                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">إحصائية الحضور</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span></div>
                         </div>
                     `;
                 } else {
                     htmlContent += `<div style="height: 20px;"></div>`;
                 }
 
-                htmlContent += `<table style="${styles.table}"><thead><tr><th style="${styles.th}">#</th><th style="${styles.th}">الرقم الجامعي</th><th style="${styles.th}">اسم الطالب</th><th style="${styles.th}">المجموعة</th><th style="${styles.th}">الحالة</th></tr></thead><tbody>`;
+                htmlContent += `
+                    <table style="width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;">
+                        <thead>
+                            <tr>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">#</th>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الرقم الجامعي</th>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">اسم الطالب</th>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">المجموعة</th>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
 
-                currentBatchStudents.forEach((student, index) => {
+                pageBatch.forEach((student, index) => {
                     const isAbsent = student.status === 'غائب';
-                    let statusBadge = `<span style="${student.status === 'حاضر' ? styles.statusPresent : styles.statusAbsent}">${student.status === 'حاضر' ? 'حاضر' : 'غائب'}</span>`;
-                    if (student.record?.isOutsideRadius) statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(خارج النطاق)</div>`;
+                    const statusColor = student.status === 'حاضر' ? '#166534' : '#991b1b';
+                    const statusBg = student.status === 'حاضر' ? '#dcfce7' : '#fee2e2';
+                    let statusBadge = `<span style="color: ${statusColor}; font-weight: bold; background-color: ${statusBg}; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;">${student.status}</span>`;
+                    
+                    if (student.record?.isOutsideRadius) {
+                        statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(خارج النطاق)</div>`;
+                    }
+
                     const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
                     const finalBg = isAbsent ? '#fff1f2' : rowBg; 
 
                     htmlContent += `
                         <tr style="background-color: ${finalBg};">
-                            <td style="${styles.td}">${student.serialNumber}</td>
-                            <td style="${styles.td} font-family: sans-serif;">${student.universityId}</td>
-                            <td style="${styles.td} text-align: right; padding-right: 20px;">${student.name}</td>
-                            <td style="${styles.td}">${student.groupName || '-'}</td>
-                            <td style="${styles.td}">${statusBadge}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${student.serialNumber}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace;">${student.universityId}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: bold;">${student.name}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${student.groupName || '-'}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${statusBadge}</td>
                         </tr>
                     `;
                 });
 
-                htmlContent += `</tbody></table><div style="${styles.footer}">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`; 
+                htmlContent += `</tbody></table><div style="margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; color: #94a3b8; font-size: 12px;">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`; 
 
                 container.innerHTML = htmlContent;
                 document.body.appendChild(container);
 
-                const canvas = await html2canvas(container, { 
-                    scale: 1.5, 
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    ignoreElements: (element: any) => element.id === 'root' // 💡 هذه الحماية تمنع الانهيار
-                });
-                
+                const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
+
                 if (pageNum > 1) pdf.addPage();
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
                 document.body.removeChild(container);
                 pageNum++;
             }
             pdf.save(`Attendance-Batch-${selectedLecture.date}.pdf`);
-            toast.success("تم التصدير بنجاح");
+            toast.success("تم تصدير تقرير الدفعة بنجاح");
         } catch (error) {
-            toast.error("حدث خطأ أثناء تصدير الـ PDF.");
+            console.error("Export Error:", error);
+            toast.error("حدث خطأ أثناء التصدير. يرجى المحاولة مجدداً.");
         } finally {
             setIsExportingPdf(false);
+            // تنظيف أي حاويات متبقية في حال حدوث خطأ
+            document.querySelectorAll('div[style*="top: -9999px"]').forEach(e => e.remove());
         }
     };
 
@@ -453,6 +449,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         return lectures.find(l => l.qrCode === selectedLectureId) || null;
     }, [lectures, selectedLectureId]);
 
+    // 📄 دالة تصدير تقرير المجموعة الشامل
     const handleGroupExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId || l.id === selectedLectureId);
         if (!selectedLecture || !activeGroup) return;
@@ -460,29 +457,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         setIsGroupExportingPdf(true);
         const actualLectureId = selectedLecture.id || selectedLecture.qrCode;
         const attendanceCount = groupMembers.filter(m => attendanceRecords.some(r => r.studentId === m.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId))).length;
-
-        // نفس التنسيقات الفخمة للمسافات
-        const styles = {
-            container: "width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: 'Amiri', sans-serif; color: #1e293b; box-sizing: border-box;",
-            headerContainer: "display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;",
-            headerTextRight: "text-align: right;",
-            headerTitle: "font-size: 28px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0; line-height: 1.2;",
-            headerSubtitle: "font-size: 18px; color: #64748b; margin: 0; font-weight: 500;",
-            headerTextLeft: "text-align: left;",
-            printDate: "font-size: 14px; color: #94a3b8; margin: 0;",
-            infoCard: "background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;",
-            infoItem: "text-align: center; flex: 1; border-left: 1px solid #e2e8f0;",
-            infoItemLast: "text-align: center; flex: 1;",
-            infoLabel: "font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;",
-            infoValue: "font-size: 18px; font-weight: bold; color: #0f172a;",
-            table: "width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;",
-            th: "background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;",
-            td: "padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; vertical-align: middle;",
-            statusPresent: "color: #166534; font-weight: bold; background-color: #dcfce7; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            statusAbsent: "color: #991b1b; font-weight: bold; background-color: #fee2e2; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;",
-            footer: "margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; color: #94a3b8; font-size: 12px;"
-        };
-
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const imgWidth = 210; 
         let remainingStudents = [...groupMembers];
@@ -490,43 +464,57 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
         try {
             while (remainingStudents.length > 0) {
-                const rowsPerPage = pageNum === 1 ? 10 : 18;
+                const rowsPerPage = pageNum === 1 ? 12 : 18;
                 const pageBatch = remainingStudents.slice(0, rowsPerPage);
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '-9999px'; container.style.zIndex = '-9999';
-                container.style.cssText += styles.container;
+                // 💡 عزل الحاوية بالكامل لمنع التداخلات وانهيار الـ Canvas
+                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: sans-serif; color: #1e293b; box-sizing: border-box;');
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
                     htmlContent += `
-                        <div style="${styles.headerContainer}">
-                            <div style="${styles.headerTextRight}">
-                                <h1 style="${styles.headerTitle}">تقرير حضور مجموعة: ${activeGroup.name}</h1>
-                                <p style="${styles.headerSubtitle}">${getBatchLabel(currentBatch)}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;">
+                            <div style="text-align: right;">
+                                <h1 style="font-size: 28px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير حضور مجموعة: ${activeGroup.name}</h1>
+                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 500;">${getBatchLabel()}</p>
                             </div>
-                            <div style="${styles.headerTextLeft}">
-                                <p style="${styles.printDate}">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <div style="text-align: left;">
+                                <p style="font-size: 14px; color: #94a3b8; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
-                        <div style="${styles.infoCard}">
-                            <div style="${styles.infoItem}"><span style="${styles.infoLabel}">المقرر</span><span style="${styles.infoValue}">${selectedLecture.courseName}</span></div>
-                            <div style="${styles.infoItem}"><span style="${styles.infoLabel}">تاريخ المحاضرة</span><span style="${styles.infoValue}">${selectedLecture.date}</span></div>
-                            <div style="${styles.infoItemLast}"><span style="${styles.infoLabel}">الحضور</span><span style="${styles.infoValue}" style="color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span></div>
+                        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
+                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">إحصائية المجموعة</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span></div>
                         </div>
                     `;
                 } else {
                     htmlContent += `<div style="height: 20px;"></div>`;
                 }
 
-                htmlContent += `<table style="${styles.table}"><thead><tr><th style="${styles.th}">#</th><th style="${styles.th}">الرقم الجامعي</th><th style="${styles.th}">اسم الطالب</th><th style="${styles.th}">الحالة</th></tr></thead><tbody>`;
+                htmlContent += `
+                    <table style="width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;">
+                        <thead>
+                            <tr>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">#</th>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الرقم الجامعي</th>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">اسم الطالب</th>
+                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
 
                 pageBatch.forEach((m, index) => {
                     const isPresent = attendanceRecords.some(r => r.studentId === m.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId));
                     const isOutsideRadius = attendanceRecords.find(r => r.studentId === m.id && (r.lectureId === actualLectureId || r.lectureId === selectedLectureId))?.isOutsideRadius;
                     
-                    let statusBadge = `<span style="${isPresent ? styles.statusPresent : styles.statusAbsent}">${isPresent ? 'حاضر' : 'غائب'}</span>`;
+                    const statusColor = isPresent ? '#166534' : '#991b1b';
+                    const statusBg = isPresent ? '#dcfce7' : '#fee2e2';
+                    let statusBadge = `<span style="color: ${statusColor}; font-weight: bold; background-color: ${statusBg}; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;">${isPresent ? 'حاضر' : 'غائب'}</span>`;
+                    
                     if (isOutsideRadius) statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(خارج النطاق)</div>`;
                     
                     const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
@@ -534,41 +522,40 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
                     htmlContent += `
                         <tr style="background-color: ${finalBg};">
-                            <td style="${styles.td}">${m.serialNumber}</td>
-                            <td style="${styles.td} font-family: sans-serif;">${m.universityId}</td>
-                            <td style="${styles.td} text-align: right; padding-right: 20px;">${m.name}</td>
-                            <td style="${styles.td}">${statusBadge}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${m.serialNumber}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace;">${m.universityId}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: bold;">${m.name}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${statusBadge}</td>
                         </tr>
                     `;
                 });
 
-                htmlContent += `</tbody></table><div style="${styles.footer}">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`;
+                htmlContent += `</tbody></table><div style="margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; color: #94a3b8; font-size: 12px;">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`;
                 
                 container.innerHTML = htmlContent; 
                 document.body.appendChild(container);
 
-                const canvas = await html2canvas(container, { 
-                    scale: 1.5, 
-                    useCORS: true, 
-                    logging: false, 
-                    backgroundColor: '#ffffff',
-                    ignoreElements: (element: any) => element.id === 'root' // 💡 الحماية القصوى لمنع الانهيار
-                });
+                const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
 
                 if (pageNum > 1) pdf.addPage();
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
                 document.body.removeChild(container); 
                 pageNum++;
             }
             pdf.save(`Attendance-Group-${activeGroup.name}-${selectedLecture.date}.pdf`);
-            toast.success("تم تصدير الـ PDF بنجاح");
+            toast.success("تم تصدير تقرير المجموعة بنجاح");
         } catch (error) {
+            console.error("Group PDF Export Error: ", error);
             toast.error("حدث خطأ أثناء تصدير الـ PDF للمجموعة.");
         } finally {
             setIsGroupExportingPdf(false);
+            // تنظيف أي حاويات متبقية
+            document.querySelectorAll('div[style*="top: -9999px"]').forEach(e => e.remove());
         }
     };
-
+    
     useEffect(() => {
         if (!activeLecture?.createdAt) { setTimeLeft(null); return; }
         const calculateTimeLeft = () => {
