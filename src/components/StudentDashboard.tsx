@@ -174,6 +174,38 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [repeatStatus, setRepeatStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
     const [isRepeating, setIsRepeating] = useState(false);
 
+    // 💡 حالة الفلاش كارد (البطاقة الذكية)
+    const [flashcardIndex, setFlashcardIndex] = useState(0);
+
+    // تصفير العداد عند تغيير المحاضرة أو التاريخ
+    useEffect(() => {
+        setFlashcardIndex(0);
+    }, [managementSelectedLectureId, selectedDateFilter]);
+
+    const handleFlashcardPresent = () => {
+        const s = managementAttendanceData[flashcardIndex];
+        if (s.status !== 'حاضر' && s.actualLectureId) {
+            onManualAttendance(s.id, s.actualLectureId as string);
+        }
+        if (flashcardIndex < managementAttendanceData.length - 1) {
+            setFlashcardIndex(prev => prev + 1);
+        } else {
+            toast.success('تم الانتهاء من تحضير القائمة!');
+        }
+    };
+
+    const handleFlashcardAbsent = () => {
+        const s = managementAttendanceData[flashcardIndex];
+        if (s.status === 'حاضر' && s.actualLectureId) {
+            onRemoveAttendance(s.id, s.actualLectureId as string);
+        }
+        if (flashcardIndex < managementAttendanceData.length - 1) {
+            setFlashcardIndex(prev => prev + 1);
+        } else {
+            toast.success('تم الانتهاء من تحضير القائمة!');
+        }
+    };
+
     const handleConfirmRepeat = async () => {
         if (!managementSelectedLectureId) return;
         setIsRepeating(true); setRepeatStatus(null);
@@ -1011,111 +1043,91 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="space-y-6 animate-fade-in">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-6">
-                            <div className={`backdrop-blur-xl border p-6 sm:p-8 rounded-[2rem] shadow-xl ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/40 border-slate-800'}`}>
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                                    <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>سجل الحضور العام</h2>
-                                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                        <button onClick={() => setCreateGroupModalOpen(true)} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30' : 'bg-slate-800 text-gray-300 hover:bg-slate-700'}`}>
-                                            <UsersIcon className="w-4 h-4" /> <span className="hidden sm:inline">إنشاء مجموعة</span>
-                                        </button>
-                                        <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50">
-                                            <TrashIcon className="w-4 h-4" /> <span className="hidden sm:inline">مسح التحضير</span>
-                                        </button>
-                                        <button onClick={() => setRepeatModalOpen(true)} disabled={!managementSelectedLectureId} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-purple-500/20 text-purple-500 hover:bg-purple-500/30' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
-                                            <CopyIcon className="w-4 h-4" /> <span className="hidden sm:inline">تكرار الحضور</span>
-                                        </button>
-                                        <button onClick={handleExportPdf} disabled={!managementSelectedLectureId || isExportingPdf} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-yellow-500 text-slate-900' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                                            {isExportingPdf ? 'جاري التصدير...' : <><span className="hidden sm:inline">تصدير PDF</span><span className="sm:hidden">PDF</span></>}
-                                        </button>
+                            <div className="backdrop-blur-xl border p-6 sm:p-8 rounded-[2rem] shadow-xl bg-slate-900/40 border-slate-800">
+                                <div className="flex justify-between mb-8"><h2 className="text-2xl font-black text-white">سجل الدفعة العام</h2>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!managementSelectedLectureId} className="px-4 py-2 bg-red-600/10 text-red-500 font-bold rounded-xl disabled:opacity-50">مسح التحضير</button>
+                                        <button onClick={handleExportPdf} disabled={!managementSelectedLectureId || isExportingPdf} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50">PDF</button>
+                                        <button onClick={() => setDeleteLectureModalOpen(true)} disabled={!managementSelectedLectureId} className="px-4 py-2 bg-red-600 text-white font-bold rounded-xl disabled:opacity-50">حذف المحاضرة</button>
                                     </div>
                                 </div>
-
-                                <div className="flex flex-wrap gap-4 mb-8">
-                                    <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-[10px] font-black text-gray-500 uppercase mb-2 mr-1">تاريخ اليوم</label>
-                                        <select value={selectedDateFilter} onChange={(e) => setSelectedDateFilter(e.target.value)} className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu">
-                                            {uniqueLectureDates.map(date => <option key={date} value={date}>{date}</option>)}
-                                            {uniqueLectureDates.length === 0 && <option value="">لا توجد تواريخ</option>}
-                                        </select>
-                                    </div>
-                                    <div className="flex-1 min-w-[200px]">
-                                        <label className="block text-[10px] font-black text-gray-500 uppercase mb-2 mr-1">اختر المحاضرة</label>
-                                        <select value={managementSelectedLectureId || ''} onChange={(e) => setManagementSelectedLectureId(e.target.value)} className="w-full bg-slate-800 border-2 border-slate-700 text-white rounded-2xl px-4 py-3 focus:border-blue-500 focus:outline-none transition-all transform-gpu">
-                                            {filteredLectures.map(l => <option key={l.qrCode} value={l.qrCode}>{l.courseName} ({l.timeSlot})</option>)}
-                                            {filteredLectures.length === 0 && <option value="">لا توجد محاضرات</option>}
-                                        </select>
-                                    </div>
+                                <div className="flex gap-4 mb-6">
+                                    <select value={selectedDateFilter} onChange={(e) => setSelectedDateFilter(e.target.value)} className="flex-1 bg-slate-800 text-white p-3 rounded-xl">{uniqueLectureDates.map(d => <option key={d} value={d}>{d}</option>)}</select>
+                                    <select value={managementSelectedLectureId || ''} onChange={(e) => setManagementSelectedLectureId(e.target.value)} className="flex-2 bg-slate-800 text-white p-3 rounded-xl">{filteredLectures.map(l => <option key={l.qrCode} value={l.qrCode}>{l.courseName}</option>)}</select>
                                 </div>
 
-                                <div className="block sm:hidden space-y-4 mt-6">
-                                    {managementAttendanceData.length > 0 ? managementAttendanceData.map((s) => (
-                                        <div key={s.id} className="bg-slate-800/30 border border-slate-700/50 p-4 rounded-2xl flex flex-col gap-3">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="bg-slate-700/50 text-gray-300 font-mono text-xs font-black px-2 py-1 rounded-lg border border-slate-600/50 shadow-sm">#{s.serialNumber}</span>
-                                                        <p className="text-white font-bold text-lg">{s.name}</p>
-                                                    </div>
-                                                    <p className="text-gray-400 text-xs font-mono">ID: {s.universityId}</p>
-                                                </div>
-                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${s.status === 'حاضر' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>{s.status}</span>
+                                {/* 💡 البطاقة الذكية السريعة للتحضير (Flashcard) */}
+                                {managementAttendanceData.length > 0 && managementSelectedLectureId && (
+                                    <div className="bg-slate-800/80 border border-slate-700 rounded-[2rem] p-6 sm:p-8 mb-8 relative overflow-hidden shadow-2xl animate-fade-in">
+                                        
+                                        {/* التنقل و العداد */}
+                                        <div className="flex justify-between items-center mb-6">
+                                            <button onClick={() => setFlashcardIndex(prev => Math.max(prev - 1, 0))} disabled={flashcardIndex === 0} className="p-3 bg-slate-700 hover:bg-slate-600 text-white rounded-2xl disabled:opacity-30 transition-all" title="السابق">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg>
+                                            </button>
+                                            <div className="text-center">
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">التقدم السريع</p>
+                                                <span className="font-mono text-sm sm:text-base font-black text-blue-400 bg-blue-500/10 px-4 py-1.5 rounded-xl border border-blue-500/20">
+                                                    {flashcardIndex + 1} / {managementAttendanceData.length}
+                                                </span>
                                             </div>
-                                            <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                                                <span className="text-xs text-gray-500">{s.record?.timestamp ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
-                                                {s.actualLectureId && (
-                                                    s.status === 'حاضر' ? (
-                                                        <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu"><XCircleIcon className="w-4 h-4"/> غياب</button>
-                                                    ) : (
-                                                        <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu"><CheckCircleIcon className="w-4 h-4"/> تحضير</button>
-                                                    )
-                                                )}
+                                            <button onClick={() => setFlashcardIndex(prev => Math.min(prev + 1, managementAttendanceData.length - 1))} disabled={flashcardIndex === managementAttendanceData.length - 1} className="p-3 bg-slate-700 hover:bg-slate-600 text-white rounded-2xl disabled:opacity-30 transition-all" title="التالي">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
+                                            </button>
+                                        </div>
+
+                                        {/* بيانات الطالب */}
+                                        <div className="text-center mb-8">
+                                            <div className="inline-block px-3 py-1 bg-slate-900 text-gray-300 font-mono text-sm font-black rounded-lg mb-4 border border-slate-700 shadow-sm">
+                                                #{managementAttendanceData[flashcardIndex]?.serialNumber}
+                                            </div>
+                                            <h3 className="text-2xl sm:text-3xl font-black text-white mb-2 leading-tight">
+                                                {managementAttendanceData[flashcardIndex]?.name}
+                                            </h3>
+                                            <p className="text-gray-400 font-mono text-base tracking-wider">
+                                                {managementAttendanceData[flashcardIndex]?.universityId}
+                                            </p>
+                                            {managementAttendanceData[flashcardIndex]?.groupName && (
+                                                <span className="inline-block mt-3 text-xs font-bold px-3 py-1 bg-purple-500/10 text-purple-400 rounded-full border border-purple-500/20">
+                                                    مجموعة: {managementAttendanceData[flashcardIndex]?.groupName}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* أزرار التحضير العملاقة */}
+                                        <div className="flex gap-4">
+                                            <button onClick={handleFlashcardAbsent} className="flex-1 py-4 sm:py-5 bg-slate-700 hover:bg-red-600 text-white font-black text-lg rounded-2xl transition-all transform-gpu flex justify-center items-center gap-2 shadow-lg group">
+                                                <XCircleIcon className="w-6 h-6 group-hover:scale-110 transition-transform" /> غائب
+                                            </button>
+                                            <button onClick={handleFlashcardPresent} className="flex-1 py-4 sm:py-5 bg-green-600 hover:bg-green-500 text-white font-black text-lg rounded-2xl transition-all transform-gpu flex justify-center items-center gap-2 shadow-lg shadow-green-600/20 group">
+                                                <CheckCircleIcon className="w-6 h-6 group-hover:scale-110 transition-transform" /> حاضر
+                                            </button>
+                                        </div>
+
+                                        {/* شريط التقدم السفلي */}
+                                        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-slate-800">
+                                            <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-400 transition-all duration-300" style={{ width: `${((flashcardIndex + 1) / managementAttendanceData.length) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-3">
+                                    {managementAttendanceData.map((s, index) => (
+                                        <div key={s.id} className={`p-4 rounded-2xl flex justify-between border transition-all ${index === flashcardIndex ? 'bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/20 scale-[1.02]' : 'bg-slate-800/30 border-slate-700/50'}`}>
+                                            <div>
+                                                <p className="text-white font-bold">{s.name}</p>
+                                                <p className="text-gray-500 text-xs">{s.serialNumber} | {s.universityId}</p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-bold text-xs ${s.status === 'حاضر' ? 'text-green-400' : 'text-red-400'}`}>{s.status}</span>
+                                                {s.actualLectureId && (s.status === 'حاضر' ? <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId!)} className="text-red-500"><XCircleIcon className="w-5 h-5"/></button> : <button onClick={() => onManualAttendance(s.id, s.actualLectureId!)} className="text-green-500"><CheckCircleIcon className="w-5 h-5"/></button>)}
                                             </div>
                                         </div>
-                                    )) : (<div className="text-center py-12 text-gray-500 italic">لا توجد بيانات لعرضها.</div>)}
-                                </div>
-
-                                <div className="hidden sm:block overflow-x-auto rounded-3xl border border-slate-800 mt-8">
-                                    <table className="w-full text-right text-sm">
-                                        <thead className="bg-slate-800/80 text-gray-400">
-                                            <tr>
-                                                <th className="px-6 py-4">#</th>
-                                                <th className="px-6 py-4">اسم الطالب</th>
-                                                <th className="px-6 py-4">الحالة</th>
-                                                <th className="px-6 py-4">تحكم</th>
-                                                <th className="px-6 py-4">التوقيت</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-800">
-                                            {managementAttendanceData.map((s) => (
-                                                <tr key={s.id} className="hover:bg-slate-800/40 transition-colors transform-gpu">
-                                                    <td className="px-6 py-4 font-mono text-gray-500">{s.serialNumber}</td>
-                                                    <td className="px-6 py-4 font-bold text-white">{s.name}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${s.status === 'حاضر' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>{s.status}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {s.actualLectureId && (
-                                                            s.status === 'حاضر' ? (
-                                                                <button onClick={() => onRemoveAttendance(s.id, s.actualLectureId as string)} className="text-red-500 hover:text-red-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-red-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90"><XCircleIcon className="w-3.5 h-3.5"/> غياب</button>
-                                                            ) : (
-                                                                <button onClick={() => onManualAttendance(s.id, s.actualLectureId as string)} className="text-green-500 hover:text-green-400 font-black text-[10px] flex items-center gap-1 uppercase tracking-wider bg-green-500/5 px-3 py-1.5 rounded-xl transition-all transform-gpu active:scale-90"><CheckCircleIcon className="w-3.5 h-3.5"/> تحضير</button>
-                                                            )
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">{s.record?.timestamp ? new Date(s.record.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                                                </tr>
-                                            ))}
-                                            {managementAttendanceData.length === 0 && (
-                                                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">لا توجد بيانات لعرضها.</td></tr>
-                                            )}
-                                        </tbody>
-                                    </table>
+                                    ))}
                                 </div>
                             </div>
                         </div>
-                        <div className="lg:col-span-1">
-                            <QRCodeDisplay activeLecture={activeLecture} onGenerateNew={handleGenerateNewClick} title="إدارة الحضور" isRamadanMode={isRamadanMode} />
-                        </div>
+                        <div className="lg:col-span-1"><QRCodeDisplay activeLecture={activeLecture} onGenerateNew={handleGenerateNewClick} title="إدارة الحضور" isRamadanMode={isRamadanMode} /></div>
                     </div>
                 </div>
             )}
