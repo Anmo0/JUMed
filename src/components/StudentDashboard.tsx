@@ -419,7 +419,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 container.innerHTML = htmlContent;
                 document.body.appendChild(container);
 
-                const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+                const canvas = await html2canvas(container, { 
+                    scale: 1.5, 
+                    useCORS: true, 
+                    logging: false, 
+                    backgroundColor: '#ffffff',
+                    onclone: (clonedDoc: any) => {
+                        clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach((el: any) => el.remove());
+                    }
+                });
                 const imgData = canvas.toDataURL('image/jpeg', 0.9);
                 const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
 
@@ -535,7 +543,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 container.innerHTML = htmlContent; 
                 document.body.appendChild(container);
 
-                const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+                const canvas = await html2canvas(container, { 
+                    scale: 1.5, 
+                    useCORS: true, 
+                    logging: false, 
+                    backgroundColor: '#ffffff',
+                    onclone: (clonedDoc: any) => {
+                        clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach((el: any) => el.remove());
+                    }
+                });
                 const imgData = canvas.toDataURL('image/jpeg', 0.9);
                 const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
 
