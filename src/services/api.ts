@@ -645,7 +645,13 @@ export const updateStudent = async (id: string, updates: Partial<Student>): Prom
         }
         
         if (updates.isLeader !== undefined) payload.is_leader = updates.isLeader;
-        if (updates.isBatchLeader !== undefined) payload.can_manage_attendance = updates.isBatchLeader;
+        
+        // 💡 هنا كان الخلل! تم تصحيح ربط المتغيرات ليقوم بتحديث العمودين معاً في قاعدة البيانات
+        if (updates.isBatchLeader !== undefined) {
+            payload.is_batch_leader = updates.isBatchLeader;
+            payload.can_manage_attendance = updates.isBatchLeader; 
+        }
+
         if (updates.deviceInfo !== undefined) payload.device_info = updates.deviceInfo;
         if (updates.tag !== undefined) payload.tag = updates.tag;
 
@@ -659,7 +665,7 @@ export const updateStudent = async (id: string, updates: Partial<Student>): Prom
             return { data: null, error: `فشل التحديث: ${updateError.message}` };
         }
 
-        // 2. نجلب البيانات الجديدة بأمان باستخدام maybeSingle
+        // 2. نجلب البيانات الجديدة بأمان
         const { data: fetchedData, error: fetchError } = await supabase
             .from('students')
             .select(`*, groups(name)`)
@@ -677,7 +683,9 @@ export const updateStudent = async (id: string, updates: Partial<Student>): Prom
                 universityId: fetchedData.university_id,
                 serialNumber: fetchedData.serial_number,
                 isLeader: fetchedData.is_leader,
-                isBatchLeader: fetchedData.can_manage_attendance,
+                // 💡 هنا الخلل الثاني! كان يجلب البيانات من العمود الخاطئ، تم تصحيحه للعمود الصحيح
+                isBatchLeader: fetchedData.is_batch_leader,
+                canManageAttendance: fetchedData.can_manage_attendance,
                 groupId: fetchedData.group_id,
                 groupName: fetchedData.groups?.name, // جلب اسم المجموعة الجديد
                 batchId: fetchedData.batch_id,
