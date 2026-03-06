@@ -183,6 +183,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }, [managementSelectedLectureId, selectedDateFilter]);
 
     const handleFlashcardPresent = () => {
+        toast.dismiss(); // 💡 الحل السحري: إخفاء أي إشعار سابق فوراً لمنع التراكم
         const s = managementAttendanceData[flashcardIndex];
         if (s.status !== 'حاضر' && s.actualLectureId) {
             onManualAttendance(s.id, s.actualLectureId as string);
@@ -195,6 +196,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     };
 
     const handleFlashcardAbsent = () => {
+        toast.dismiss(); // 💡 إخفاء الإشعارات السابقة
         const s = managementAttendanceData[flashcardIndex];
         if (s.status === 'حاضر' && s.actualLectureId) {
             onRemoveAttendance(s.id, s.actualLectureId as string);
@@ -352,9 +354,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [lectures, attendanceRecords, student, activeLecture]);
 
-    // 💡 دالة ذكية تحول بيانات الدفعة لعنوان رسمي (مثال: السنة السادسة - شعبة الطالبات)
+    // 💡 دالة ذكية تحول بيانات الدفعة لعنوان رسمي
     const getBatchLabel = () => {
-        if (!currentBatch) return '';
+        if (!currentBatch || !currentBatch.batchName) return '';
         const yearNames = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة'];
         const yearStr = currentBatch.currentYear && currentBatch.currentYear >= 1 && currentBatch.currentYear <= 7 
             ? yearNames[currentBatch.currentYear - 1] 
@@ -363,7 +365,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         return `السنة ${yearStr} - ${section}`;
     };
 
-    // 📄 دالة تصدير تقرير الدفعة الشامل
+    // 📄 تصدير تقرير الدفعة
     const handleExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === managementSelectedLectureId || l.id === managementSelectedLectureId);
         if (!selectedLecture) return;
@@ -382,41 +384,39 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                // 💡 استخدام خط System-ui الافتراضي للمتصفح لضمان قراءة عربية جميلة في Canvas
-                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; box-sizing: border-box;');
+                // 💡 استخدام إعدادات CSS آمنة تماماً تمنع انهيار html2canvas
+                container.style.cssText = "position: absolute; left: -9999px; top: 0; width: 794px; padding: 40px; background-color: #ffffff; direction: rtl; font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #1e293b; box-sizing: border-box;";
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
                     htmlContent += `
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 25px;">
                             <div style="text-align: right;">
-                                <h1 style="font-size: 32px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير الحضور الشامل</h1>
-                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 600;">${getBatchLabel()}</p>
+                                <h1 style="font-size: 26px; font-weight: bold; margin: 0 0 8px 0; color: #0f172a;">تقرير الحضور الشامل</h1>
+                                <p style="font-size: 16px; color: #475569; margin: 0; font-weight: bold;">${getBatchLabel()}</p>
                             </div>
                             <div style="text-align: left;">
-                                <p style="font-size: 14px; color: #94a3b8; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
+                                <p style="font-size: 14px; color: #64748b; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
-                        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">التوقيت</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.timeSlot}</span></div>
-                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">إحصائية الحضور</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span></div>
+                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between;">
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">المقرر</span><span style="font-size: 16px; font-weight: bold;">${selectedLecture.courseName}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">التاريخ</span><span style="font-size: 16px; font-weight: bold;">${selectedLecture.date}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">التوقيت</span><span style="font-size: 16px; font-weight: bold;">${selectedLecture.timeSlot}</span></div>
+                            <div style="text-align: center; flex: 1;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">الحضور</span><span style="font-size: 16px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span></div>
                         </div>
                     `;
-                } else {
-                    htmlContent += `<div style="height: 20px;"></div>`;
                 }
 
                 htmlContent += `
-                    <table style="width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
                         <thead>
                             <tr>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">#</th>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الرقم الجامعي</th>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">اسم الطالب</th>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">المجموعة</th>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الحالة</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155;">#</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155;">الرقم الجامعي</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155; text-align: right;">اسم الطالب</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155;">المجموعة</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155;">الحالة</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -426,38 +426,39 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     const isAbsent = student.status === 'غائب';
                     const statusColor = student.status === 'حاضر' ? '#166534' : '#991b1b';
                     const statusBg = student.status === 'حاضر' ? '#dcfce7' : '#fee2e2';
-                    let statusBadge = `<span style="color: ${statusColor}; font-weight: bold; background-color: ${statusBg}; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;">${student.status}</span>`;
+                    let statusBadge = `<span style="color: ${statusColor}; background-color: ${statusBg}; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">${student.status}</span>`;
                     
                     if (student.record?.isOutsideRadius) {
-                        statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(خارج النطاق)</div>`;
+                        statusBadge += `<br/><span style="font-size: 10px; color: #d97706;">(خارج النطاق)</span>`;
                     }
 
                     const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
                     const finalBg = isAbsent ? '#fff1f2' : rowBg; 
 
                     htmlContent += `
-                        <tr style="background-color: ${finalBg};">
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${student.serialNumber}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace;">${student.universityId}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: 600;">${student.name}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${student.groupName || '-'}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${statusBadge}</td>
+                        <tr style="background-color: ${finalBg}; text-align: center;">
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${student.serialNumber}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${student.universityId}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${student.name}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${student.groupName || '-'}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${statusBadge}</td>
                         </tr>
                     `;
                 });
 
-                htmlContent += `</tbody></table><div style="margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; color: #94a3b8; font-size: 12px;">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`; 
+                htmlContent += `</tbody></table><div style="margin-top: 20px; text-align: center; color: #94a3b8; font-size: 12px;">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`; 
 
                 container.innerHTML = htmlContent;
                 document.body.appendChild(container);
 
                 const canvas = await html2canvas(container, { 
-                    scale: 2, // 💡 رفعنا جودة الصورة لزيادة وضوح الخط
-                    useCORS: true, 
-                    logging: false, 
+                    scale: 2, // دقة عالية لخط أوضح
+                    useCORS: true,
+                    logging: false,
                     backgroundColor: '#ffffff'
                 });
-                const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
                 const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
 
                 if (pageNum > 1) pdf.addPage();
@@ -472,7 +473,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             toast.error("حدث خطأ أثناء التصدير. يرجى المحاولة مجدداً.");
         } finally {
             setIsExportingPdf(false);
-            document.querySelectorAll('div[style*="top: -9999px"]').forEach(e => e.remove());
+            document.querySelectorAll('div[style*="left: -9999px"]').forEach(e => e.remove()); // تنظيف آمن
         }
     };
 
@@ -485,7 +486,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         return lectures.find(l => l.qrCode === selectedLectureId) || null;
     }, [lectures, selectedLectureId]);
 
-    // 📄 دالة تصدير تقرير المجموعة الشامل
+    // 📄 تصدير تقرير المجموعة
     const handleGroupExportPdf = async () => {
         const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId || l.id === selectedLectureId);
         if (!selectedLecture || !activeGroup) return;
@@ -505,39 +506,37 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; box-sizing: border-box;');
+                container.style.cssText = "position: absolute; left: -9999px; top: 0; width: 794px; padding: 40px; background-color: #ffffff; direction: rtl; font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; color: #1e293b; box-sizing: border-box;";
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
                     htmlContent += `
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 25px;">
                             <div style="text-align: right;">
-                                <h1 style="font-size: 32px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير حضور مجموعة: ${activeGroup.name}</h1>
-                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 600;">${getBatchLabel()}</p>
+                                <h1 style="font-size: 26px; font-weight: bold; margin: 0 0 8px 0; color: #0f172a;">تقرير حضور مجموعة: ${activeGroup.name}</h1>
+                                <p style="font-size: 16px; color: #475569; margin: 0; font-weight: bold;">${getBatchLabel()}</p>
                             </div>
                             <div style="text-align: left;">
-                                <p style="font-size: 14px; color: #94a3b8; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
+                                <p style="font-size: 14px; color: #64748b; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
-                        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">التوقيت</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.timeSlot}</span></div>
-                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">إحصائية المجموعة</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span></div>
+                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between;">
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">المقرر</span><span style="font-size: 16px; font-weight: bold;">${selectedLecture.courseName}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">التاريخ</span><span style="font-size: 16px; font-weight: bold;">${selectedLecture.date}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">التوقيت</span><span style="font-size: 16px; font-weight: bold;">${selectedLecture.timeSlot}</span></div>
+                            <div style="text-align: center; flex: 1;"><span style="font-size: 13px; color: #64748b; display: block; margin-bottom: 4px;">حضور المجموعة</span><span style="font-size: 16px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span></div>
                         </div>
                     `;
-                } else {
-                    htmlContent += `<div style="height: 20px;"></div>`;
                 }
 
                 htmlContent += `
-                    <table style="width: 100%; border-collapse: collapse; font-size: 16px; margin-bottom: 10px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
                         <thead>
                             <tr>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">#</th>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الرقم الجامعي</th>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">اسم الطالب</th>
-                                <th style="background-color: #1e293b; color: white; padding: 14px; text-align: center; font-weight: bold; border-bottom: 3px solid #334155;">الحالة</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155;">#</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155;">الرقم الجامعي</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155; text-align: right;">اسم الطالب</th>
+                                <th style="background-color: #1e293b; color: #ffffff; padding: 12px; border-bottom: 2px solid #334155;">الحالة</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -549,37 +548,40 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     
                     const statusColor = isPresent ? '#166534' : '#991b1b';
                     const statusBg = isPresent ? '#dcfce7' : '#fee2e2';
-                    let statusBadge = `<span style="color: ${statusColor}; font-weight: bold; background-color: ${statusBg}; padding: 4px 12px; border-radius: 9999px; display: inline-block; font-size: 14px;">${isPresent ? 'حاضر' : 'غائب'}</span>`;
+                    let statusBadge = `<span style="color: ${statusColor}; background-color: ${statusBg}; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">${isPresent ? 'حاضر' : 'غائب'}</span>`;
                     
-                    if (isOutsideRadius) statusBadge += `<div style="font-size: 10px; color: #d97706; margin-top: 2px;">(خارج النطاق)</div>`;
+                    if (isOutsideRadius) statusBadge += `<br/><span style="font-size: 10px; color: #d97706;">(خارج النطاق)</span>`;
                     
                     const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
                     const finalBg = !isPresent ? '#fff1f2' : rowBg; 
 
                     htmlContent += `
-                        <tr style="background-color: ${finalBg};">
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${m.serialNumber}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace;">${m.universityId}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: 600;">${m.name}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${statusBadge}</td>
+                        <tr style="background-color: ${finalBg}; text-align: center;">
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${m.serialNumber}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${m.universityId}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${m.name}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">${statusBadge}</td>
                         </tr>
                     `;
                 });
 
-                htmlContent += `</tbody></table><div style="margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; color: #94a3b8; font-size: 12px;">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`;
+                htmlContent += `</tbody></table><div style="margin-top: 20px; text-align: center; color: #94a3b8; font-size: 12px;">تم إنشاء هذا التقرير آلياً - صفحة ${pageNum}</div></div>`;
                 
                 container.innerHTML = htmlContent; 
                 document.body.appendChild(container);
 
                 const canvas = await html2canvas(container, { 
-                    scale: 2, // 💡 رفعنا جودة الصورة
+                    scale: 2, 
                     useCORS: true, 
                     logging: false, 
                     backgroundColor: '#ffffff'
                 });
 
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
+
                 if (pageNum > 1) pdf.addPage();
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
                 document.body.removeChild(container); 
                 pageNum++;
             }
@@ -590,7 +592,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             toast.error("حدث خطأ أثناء تصدير الـ PDF للمجموعة.");
         } finally {
             setIsGroupExportingPdf(false);
-            document.querySelectorAll('div[style*="top: -9999px"]').forEach(e => e.remove());
+            document.querySelectorAll('div[style*="left: -9999px"]').forEach(e => e.remove());
         }
     };
     
