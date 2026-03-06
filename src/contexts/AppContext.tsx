@@ -555,10 +555,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!error) { updateState({ attendance: [] }); toast.success('تم مسح جميع سجلات الحضور بنجاح.'); }
   }, [updateState]);
 
-  const clearAllLectures = useCallback(async () => {
-    const { error } = await apiClearAllLectures();
-    if (!error) { updateState({ attendance: [], lectures: [] }); toast.success('تم مسح جميع المحاضرات والسجلات.'); }
-  }, [updateState]);
+  const clearAllLectures = useCallback(async (courseId?: string) => {
+    if (!state.selectedBatchId) return;
+
+    // 1. أخذ نسخة احتياطية للمقرر المحدد فقط
+    const lecturesToRestore = state.lectures.filter(l => 
+        l.batchId === state.selectedBatchId && (!courseId || l.courseId === courseId)
+    );
+    const lectureIds = new Set(lecturesToRestore.map(l => l.id));
+    const attendanceToRestore = state.attendance.filter(a => lectureIds.has(a.lectureId));
+
+    if (lecturesToRestore.length === 0) {
+        toast.error('لا توجد محاضرات لمسحها في هذا المقرر!');
+        return;
+    }
+
+    // 2. إخفاء البيانات من الواجهة فوراً
+    updateState(prev => ({
+        lectures: prev.lectures.filter(l => !lectureIds.has(l.id)),
+        attendance: prev.attendance.filter(a => !lectureIds.has(a.lectureId))
+    }));
+
+    // 3. مؤقت الحذف الفعلي
+    const deleteTimer = setTimeout(async () => {
+        await apiClearBatchLectures(state.selectedBatchId!, courseId);
+    }, 6000);
+
+    // 4. رسالة التراجع
+    toast((t) => (
+        <div className="flex items-center justify-between w-full gap-4 font-bold text-sm text-right" style={{ direction: 'rtl' }}>
+            <span className="text-white">تم مسح محاضرات المقرر 🗑️</span>
+            <button onClick={() => {
+                toast.dismiss(t.id);
+                clearTimeout(deleteTimer);
+                updateState(prev => ({
+                    lectures: [...prev.lectures, ...lecturesToRestore],
+                    attendance: [...prev.attendance, ...attendanceToRestore]
+                }));
+                toast.success('تم التراجع عن المسح ♻️');
+            }} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-1.5 rounded-lg border border-slate-500 shadow-lg">تراجع</button>
+        </div>
+    ), { duration: 6000, position: 'bottom-center', id: 'undo-clear-all' });
+  }, [state.lectures, state.attendance, state.selectedBatchId, updateState]);
 
   const recalculateSerials = useCallback(async () => {
     if (!window.confirm('إعادة احتساب الأرقام التسلسلية؟')) return;

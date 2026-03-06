@@ -55,7 +55,7 @@ interface AdminDashboardProps {
     absencePercentageEnabled: boolean;
     onToggleAbsencePercentage: (enabled: boolean) => void;
     onClearAllAttendance: () => void;
-    onClearAllLectures: () => void;
+    onClearAllLectures: (courseId?: string) => void;
     isRamadanMode: boolean;
     selectedBatchId: string | null;
     courses: Course[];
@@ -690,17 +690,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         return [...students].sort((a, b) => Number(a.serialNumber) - Number(b.serialNumber));
     }, [students]);
 
+    // 1. تصفية التواريخ لتظهر فقط تواريخ المقرر المختار
     const uniqueLectureDates = useMemo(() => {
-        const dates = Array.from(new Set(lectures.map(l => l.date)));
+        const filtered = lectures.filter(l => !selectedCourseId || l.courseId === selectedCourseId);
+        const dates = Array.from(new Set(filtered.map(l => l.date)));
         return dates.sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime());
-    }, [lectures]);
+    }, [lectures, selectedCourseId]);
 
+    // 2. تصفية المحاضرات لتظهر فقط محاضرات المقرر المختار في اليوم المختار
     const filteredLectures = useMemo(() => {
         if (!selectedDateFilter) return [];
         return lectures
-            .filter(l => l.date === selectedDateFilter)
+            .filter(l => l.date === selectedDateFilter && (!selectedCourseId || l.courseId === selectedCourseId))
             .sort((a: Lecture, b: Lecture) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [lectures, selectedDateFilter]);
+    }, [lectures, selectedDateFilter, selectedCourseId]);
 
     useEffect(() => {
         if (!selectedDateFilter && uniqueLectureDates.length > 0) {
@@ -1447,8 +1450,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="mb-8">
-                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                                                <div className="mb-8 space-y-6">
+                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                                         <h2 className={`text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>سجلات الحضور</h2>
                                                         {activeLecture && (
                                                             <span className="flex items-center gap-2 text-[10px] font-black text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
@@ -1456,20 +1459,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    
-                                                    {/* 💡 شريط يظهر عندما يكون الأدمن يستعرض مجموعة محددة */}
-                                                    {attendanceGroupFilter !== 'all' && (
-                                                        <div className="flex items-center justify-between bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl mb-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <UsersIcon className="w-5 h-5 text-purple-400" />
-                                                                <span className="font-bold text-purple-300 text-sm">أنت الآن تستعرض سجل حضور مجموعة محددة فقط.</span>
-                                                            </div>
-                                                            <button onClick={() => setAttendanceGroupFilter('all')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all transform-gpu">
-                                                                عرض كل الطلاب
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                        
+
+                                                    {/* --- قائمة اختيار المقرر (نظام البلوكات) --- */}
+                                                    <div className="space-y-2 animate-fade-in">
+                                                        <label className="text-xs font-bold text-gray-400 px-1">المقرر الحالي (البلوك):</label>
+                                                        <select 
+                                                            value={selectedCourseId}
+                                                            onChange={(e) => {
+                                                                setSelectedCourseId(e.target.value);
+                                                                setSelectedDateFilter(''); // تصفير التاريخ عند تغيير البلوك
+                                                            }}
+                                                            className="w-full sm:w-80 block px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none transition-all shadow-lg"
+                                                        >
+                                                            <option value="">جميع المقررات</option>
+                                                            {courses.map(course => (
+                                                                <option key={course.id} value={course.id}>{course.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+                                                    {/* شريط التواريخ - يظهر فقط تواريخ المقرر المختار */}
                                                     <div className="flex gap-3 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                                                         {uniqueLectureDates.length > 0 ? uniqueLectureDates.map((dateStr) => {
                                                             const date = new Date(dateStr);
@@ -1490,21 +1499,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                                 </button>
                                                             );
                                                         }) : (
-                                                            <div className="text-gray-500 text-sm py-4 italic">لا توجد محاضرات مسجلة بعد.</div>
+                                                            <div className="text-gray-500 text-sm py-4 italic">لا توجد محاضرات مسجلة لهذا المقرر.</div>
                                                         )}
                                                     </div>
                                                 </div>
 
+                                                {/* أدوات التحكم في الحضور */}
                                                 <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
                                                     <div className="w-full sm:w-72">
                                                         <select 
                                                             value={selectedLectureId || ''}
                                                             onChange={(e) => setSelectedLectureId(e.target.value)}
-                                                            className="block w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 text-xs sm:text-sm bg-slate-800/50 border-slate-700 text-white transition-all disabled:opacity-50"
+                                                            className="block w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none transition-all disabled:opacity-50"
                                                             disabled={!selectedDateFilter || filteredLectures.length === 0}
                                                         >
                                                             {filteredLectures.length === 0 ? (
-                                                                <option value="">لا توجد محاضرات في هذا اليوم</option>
+                                                                <option value="">لا توجد محاضرات</option>
                                                             ) : (
                                                                 filteredLectures.map(lecture => (
                                                                     <option key={lecture.qrCode} value={lecture.qrCode}>
@@ -1519,89 +1529,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         <button 
                                                             onClick={() => setClearAttendanceModalOpen(true)}
                                                             disabled={!selectedLectureId}
-                                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 border disabled:opacity-50 disabled:cursor-not-allowed ${
-                                                                isRamadanMode 
-                                                                    ? 'bg-red-600/10 border-red-500/20 text-red-400 hover:bg-red-600 hover:text-white' 
-                                                                    : 'bg-red-600/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white'
-                                                            }`}
-                                                            title="تصفير / مسح التحضير"
+                                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all transform-gpu disabled:opacity-50"
+                                                            title="تصفير تحضير المحاضرة المختارة"
                                                         >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                                                <path d="M3 3v5h5" />
-                                                                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                                                                <path d="M16 21v-5h5" />
-                                                            </svg>
-                                                            <span className="text-xs sm:text-sm font-bold hidden sm:inline">مسح التحضير</span>
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                                                            <span className="text-sm font-bold hidden sm:inline">تصفير الحاضرين</span>
                                                         </button>
+                                                        
                                                         <button 
-                                                            onClick={() => setClearLecturesModalOpen(true)}
-                                                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 border ${
-                                                                isRamadanMode 
-                                                                    ? 'bg-red-600/10 border-red-500/20 text-red-400 hover:bg-red-600 hover:text-white' 
-                                                                    : 'bg-red-600/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white'
-                                                            }`}
-                                                            title="مسح جميع المحاضرات والسجلات نهائياً"
+                                                            onClick={() => { 
+                                                                // 💡 التعديل هنا: أضف حرف "on" في بداية اسم الدالة
+                                                                onClearAllLectures(selectedCourseId); 
+                                                                setClearLecturesModalOpen(false); 
+                                                            }} 
+                                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all transform-gpu"
+                                                            title="مسح محاضرات المقرر المختار فقط"
                                                         >
-                                                            <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                            <span className="text-xs sm:text-sm font-bold hidden sm:inline">مسح المحاضرات</span>
+                                                            <TrashIcon className="w-5 h-5" />
+                                                            <span className="text-sm font-bold hidden sm:inline">مسح محاضرات المقرر</span>
                                                         </button>
-                                                        <button onClick={() => setRepeatModalOpen(true)} disabled={!selectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed" title="تكرار الحضور">
-                                                            <CopyIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                                                        </button>
-                                                        <button onClick={handleExportPdf} disabled={!selectedLectureId || isExportingPdf} className={`flex-[2] sm:flex-none font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all transform-gpu shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
+
+                                                        <button onClick={handleExportPdf} disabled={!selectedLectureId || isExportingPdf} className={`flex-[2] sm:flex-none font-bold px-6 py-3 rounded-2xl shadow-lg transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
                                                             {isExportingPdf ? 'جاري التصدير...' : 'تصدير PDF'}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setDeleteLectureModalOpen(true)} 
-                                                            disabled={!selectedLectureId} 
-                                                            className="flex-1 sm:flex-none flex items-center justify-center p-2.5 sm:p-3 bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-xl sm:rounded-2xl transition-all transform-gpu active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            title="حذف المحاضرة نهائياً"
-                                                        >
-                                                            <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                                                         </button>
                                                     </div>
                                                 </div>
 
-                                                <div className="block sm:hidden space-y-4">
-                                                    {attendanceData.length > 0 ? attendanceData.map((item) => (
-                                                        <div key={item.id} className="bg-slate-800/30 border border-slate-700/50 p-4 rounded-2xl flex flex-col gap-3 transition-all transform-gpu">
-                                                            <div className="flex justify-between items-start">
-                                                                <div>
-                                                                    <div className="flex items-center gap-2 mb-1">
-                                                                        <span className="bg-slate-700/50 text-gray-300 font-mono text-xs font-black px-2 py-1 rounded-lg border border-slate-600/50 shadow-sm">
-                                                                            #{item.serialNumber}
-                                                                        </span>
-                                                                        <p className="text-white font-bold text-lg">{item.name}</p>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2 mt-1">
-                                                                        <p className="text-gray-400 text-xs font-mono">ID: {item.universityId}</p>
-                                                                        {getGroupBadge(item.groupName, item.isGroupActive)}
-                                                                    </div>
-                                                                </div>
-                                                                {getStatusChip(item.status, item.record)}
-                                                            </div>
-                                                            <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
-                                                                <span className="text-xs text-gray-500">{item.isLeader ? '(قائد المجموعة)' : ''}</span>
-                                                                {item.status === 'غائب' ? (
-                                                                    <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
-                                                                        <CheckCircleIcon className="w-4 h-4"/> تحضير
-                                                                    </button>
-                                                                ) : (
-                                                                    <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 font-black text-sm flex items-center gap-1 transition-all transform-gpu">
-                                                                        <XCircleIcon className="w-4 h-4"/> إلغاء
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )) : (
-                                                        <div className="text-center py-12 text-gray-500 italic">لا توجد سجلات.</div>
-                                                    )}
-                                                </div>
-
+                                                {/* جدول الحضور */}
                                                 <div className="hidden sm:block overflow-hidden rounded-3xl border border-slate-800">
                                                     <table className="w-full text-sm text-right">
-                                                        <thead className="text-xs uppercase bg-slate-800/80 text-gray-300">
+                                                        <thead className="bg-slate-800/80 text-gray-300">
                                                             <tr>
                                                                 <th className="px-6 py-4">#</th>
                                                                 <th className="px-6 py-4">اسم الطالب</th>
@@ -1612,7 +1569,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-800 bg-slate-900/20">
                                                             {attendanceData.length > 0 ? attendanceData.map((item) => (
-                                                                <tr key={item.id} className="hover:bg-slate-800/40 transition-colors transform-gpu">
+                                                                <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
                                                                     <td className="px-6 py-4 font-mono text-gray-500">{item.serialNumber}</td>
                                                                     <td className="px-6 py-4 font-bold text-white">
                                                                         {item.name}
@@ -1622,21 +1579,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                                     <td className="px-6 py-4">{getStatusChip(item.status, item.record)}</td>
                                                                     <td className="px-6 py-4">
                                                                         {item.status === 'غائب' ? (
-                                                                            <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 hover:underline font-bold text-xs flex items-center gap-1 transition-all transform-gpu">
+                                                                            <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 hover:underline font-bold text-xs flex items-center gap-1">
                                                                                 <CheckCircleIcon className="w-4 h-4"/> تحضير
                                                                             </button>
                                                                         ) : (
-                                                                            <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 hover:underline font-bold text-xs flex items-center gap-1 transition-all transform-gpu">
+                                                                            <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 hover:underline font-bold text-xs flex items-center gap-1">
                                                                                 <XCircleIcon className="w-4 h-4"/> إلغاء
                                                                             </button>
                                                                         )}
                                                                     </td>
                                                                 </tr>
                                                             )) : (
-                                                                <tr><td colSpan={5} className="text-center py-12 text-gray-500 italic">بانتظار تحديد محاضرة لعرض البيانات...</td></tr>
+                                                                <tr><td colSpan={5} className="text-center py-12 text-gray-500 italic">بانتظار تحديد محاضرة...</td></tr>
                                                             )}
                                                         </tbody>
                                                     </table>
+                                                </div>
+
+                                                {/* عرض الجوال */}
+                                                <div className="block sm:hidden space-y-4">
+                                                    {attendanceData.map((item) => (
+                                                        <div key={item.id} className="bg-slate-800/30 border border-slate-700/50 p-4 rounded-2xl flex flex-col gap-3">
+                                                            <div className="flex justify-between items-start">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <span className="bg-slate-700/50 text-gray-300 font-mono text-xs font-black px-2 py-1 rounded-lg">#{item.serialNumber}</span>
+                                                                        <p className="text-white font-bold">{item.name}</p>
+                                                                    </div>
+                                                                    <p className="text-gray-400 text-xs">ID: {item.universityId}</p>
+                                                                </div>
+                                                                {getStatusChip(item.status, item.record)}
+                                                            </div>
+                                                            <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
+                                                                {getGroupBadge(item.groupName, item.isGroupActive)}
+                                                                {item.status === 'غائب' ? (
+                                                                    <button onClick={() => onManualAttendance(item.id, item.actualLectureId)} className="text-green-500 font-black text-sm flex items-center gap-1">تحضير</button>
+                                                                ) : (
+                                                                    <button onClick={() => onRemoveAttendance(item.id, item.actualLectureId)} className="text-red-500 font-black text-sm flex items-center gap-1">إلغاء</button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </>
                                         )}
@@ -2296,7 +2279,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     <p className="text-gray-300 font-bold">هل أنت متأكد من مسح جميع المحاضرات وسجلات الحضور نهائياً؟</p>
                     <p className="text-red-400 text-xs mt-2">سيتم تصفير النظام بالكامل (باستثناء الطلاب والمجموعات).</p>
                     <div className="mt-8 flex gap-3">
-                        <button onClick={() => setClearLecturesModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl text-white font-bold transition-all transform-gpu">إلغاء</button>
+                        <button 
+                            onClick={() => {
+                                // تمرير معرف المقرر المختار لكي يتم حذف محاضراته فقط وليس كل الدفعات
+                                clearAllLectures(selectedCourseId); 
+                                setClearLecturesModalOpen(false); 
+                            }} 
+                            className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all"
+                        >
+                            تأكيد المسح للمقرر المختار
+                        </button>
                         <button onClick={handleConfirmClearLectures} className="flex-1 py-3 bg-red-600 rounded-2xl text-white font-bold transition-all transform-gpu">تأكيد المسح الشامل</button>
                     </div>
                 </div>
@@ -2566,7 +2558,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                             <div className="relative">
                                 <input 
                                     type="number" 
-                                    step="0.1" 
+                                    step="any"
                                     value={courseFormState.absenceWeight} 
                                     onChange={(e) => setCourseFormState(p => ({...p, absenceWeight: Number(e.target.value)}))} 
                                     required 

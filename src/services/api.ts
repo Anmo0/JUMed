@@ -929,10 +929,26 @@ export const clearAllAttendance = async (): Promise<MutationResult<null>> => {
     return { data: null, error: null };
 };
 
-export const clearAllLectures = async (): Promise<MutationResult<null>> => {
-    await clearAllAttendance();
-    const { error } = await supabase.from('lectures').delete().not('qr_code', 'is', null);
-    if (error) return { data: null, error: `فشل مسح جميع المحاضرات: ${error.message}` };
+// تحديث الدالة لتكون محصورة بدفعة ومقرر معين
+export const clearBatchLectures = async (batchId: string, courseId?: string): Promise<MutationResult<null>> => {
+    // 1. جلب معرفات المحاضرات المطلوب حذفها فقط
+    let query = supabase.from('lectures').select('id').eq('batch_id', batchId);
+    if (courseId) query = query.eq('course_id', courseId);
+    
+    const { data: lecturesToDelete, error: fetchError } = await query;
+    if (fetchError) return { data: null, error: fetchError.message };
+    if (!lecturesToDelete || lecturesToDelete.length === 0) return { data: null, error: null };
+    
+    const ids = lecturesToDelete.map(l => l.id);
+    
+    // 2. حذف سجلات الحضور لهذه المحاضرات أولاً
+    const { error: attError } = await supabase.from('attendance').delete().in('lecture_id', ids);
+    if (attError) return { data: null, error: attError.message };
+    
+    // 3. حذف المحاضرات نفسها
+    const { error: lecError } = await supabase.from('lectures').delete().in('id', ids);
+    if (lecError) return { data: null, error: lecError.message };
+    
     return { data: null, error: null };
 };
 
