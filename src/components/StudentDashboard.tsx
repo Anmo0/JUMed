@@ -382,26 +382,26 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                // 💡 عزل الحاوية بالكامل لمنع التداخلات وانهيار الـ Canvas
-                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: sans-serif; color: #1e293b; box-sizing: border-box;');
+                // 💡 استخدام خط System-ui الافتراضي للمتصفح لضمان قراءة عربية جميلة في Canvas
+                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; box-sizing: border-box;');
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
                     htmlContent += `
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;">
                             <div style="text-align: right;">
-                                <h1 style="font-size: 28px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير حضور شامل</h1>
-                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 500;">${getBatchLabel()}</p>
+                                <h1 style="font-size: 32px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير الحضور الشامل</h1>
+                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 600;">${getBatchLabel()}</p>
                             </div>
                             <div style="text-align: left;">
                                 <p style="font-size: 14px; color: #94a3b8; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
                         <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">التوقيت</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.timeSlot}</span></div>
-                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">إحصائية الحضور</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">التوقيت</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.timeSlot}</span></div>
+                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">إحصائية الحضور</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${managementAttendanceData.length}</span></div>
                         </div>
                     `;
                 } else {
@@ -437,9 +437,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
                     htmlContent += `
                         <tr style="background-color: ${finalBg};">
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${student.serialNumber}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${student.serialNumber}</td>
                             <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace;">${student.universityId}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: bold;">${student.name}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: 600;">${student.name}</td>
                             <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${student.groupName || '-'}</td>
                             <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${statusBadge}</td>
                         </tr>
@@ -452,13 +452,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 document.body.appendChild(container);
 
                 const canvas = await html2canvas(container, { 
-                    scale: 1.5, 
+                    scale: 2, // 💡 رفعنا جودة الصورة لزيادة وضوح الخط
                     useCORS: true, 
                     logging: false, 
-                    backgroundColor: '#ffffff',
-                    onclone: (clonedDoc: any) => {
-                        clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach((el: any) => el.remove());
-                    }
+                    backgroundColor: '#ffffff'
                 });
                 const imgData = canvas.toDataURL('image/jpeg', 0.9);
                 const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -475,7 +472,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             toast.error("حدث خطأ أثناء التصدير. يرجى المحاولة مجدداً.");
         } finally {
             setIsExportingPdf(false);
-            // تنظيف أي حاويات متبقية في حال حدوث خطأ
             document.querySelectorAll('div[style*="top: -9999px"]').forEach(e => e.remove());
         }
     };
@@ -509,25 +505,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 remainingStudents = remainingStudents.slice(rowsPerPage);
 
                 const container = document.createElement('div');
-                // 💡 عزل الحاوية بالكامل لمنع التداخلات وانهيار الـ Canvas
-                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: sans-serif; color: #1e293b; box-sizing: border-box;');
+                container.setAttribute('style', 'position: absolute; top: -9999px; left: -9999px; width: 794px; padding: 40px; background-color: white; direction: rtl; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; box-sizing: border-box;');
 
                 let htmlContent = `<div>`;
                 if (pageNum === 1) {
                     htmlContent += `
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #2563eb; padding-bottom: 25px; margin-bottom: 35px;">
                             <div style="text-align: right;">
-                                <h1 style="font-size: 28px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير حضور مجموعة: ${activeGroup.name}</h1>
-                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 500;">${getBatchLabel()}</p>
+                                <h1 style="font-size: 32px; font-weight: bold; color: #1e293b; margin: 0 0 10px 0;">تقرير حضور مجموعة: ${activeGroup.name}</h1>
+                                <p style="font-size: 18px; color: #64748b; margin: 0; font-weight: 600;">${getBatchLabel()}</p>
                             </div>
                             <div style="text-align: left;">
                                 <p style="font-size: 14px; color: #94a3b8; margin: 0;">تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
                             </div>
                         </div>
                         <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
-                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
-                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 500;">إحصائية المجموعة</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">المقرر</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.courseName}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">تاريخ المحاضرة</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.date}</span></div>
+                            <div style="text-align: center; flex: 1; border-left: 1px solid #e2e8f0;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">التوقيت</span><span style="font-size: 18px; font-weight: bold; color: #0f172a;">${selectedLecture.timeSlot}</span></div>
+                            <div style="text-align: center; flex: 1;"><span style="font-size: 14px; color: #64748b; margin-bottom: 6px; display: block; font-weight: 600;">إحصائية المجموعة</span><span style="font-size: 18px; font-weight: bold; color: #2563eb;">${attendanceCount} / ${groupMembers.length}</span></div>
                         </div>
                     `;
                 } else {
@@ -562,9 +558,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
                     htmlContent += `
                         <tr style="background-color: ${finalBg};">
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${m.serialNumber}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${m.serialNumber}</td>
                             <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace;">${m.universityId}</td>
-                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: bold;">${m.name}</td>
+                            <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: right; padding-right: 20px; font-weight: 600;">${m.name}</td>
                             <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; text-align: center;">${statusBadge}</td>
                         </tr>
                     `;
@@ -576,19 +572,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 document.body.appendChild(container);
 
                 const canvas = await html2canvas(container, { 
-                    scale: 1.5, 
+                    scale: 2, // 💡 رفعنا جودة الصورة
                     useCORS: true, 
                     logging: false, 
-                    backgroundColor: '#ffffff',
-                    onclone: (clonedDoc: any) => {
-                        clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach((el: any) => el.remove());
-                    }
+                    backgroundColor: '#ffffff'
                 });
-                const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                const pdfImgHeight = (canvas.height * imgWidth) / canvas.width;
 
                 if (pageNum > 1) pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, pdfImgHeight, undefined, 'FAST');
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
                 document.body.removeChild(container); 
                 pageNum++;
             }
@@ -599,7 +590,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             toast.error("حدث خطأ أثناء تصدير الـ PDF للمجموعة.");
         } finally {
             setIsGroupExportingPdf(false);
-            // تنظيف أي حاويات متبقية
             document.querySelectorAll('div[style*="top: -9999px"]').forEach(e => e.remove());
         }
     };
