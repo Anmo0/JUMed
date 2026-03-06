@@ -33,14 +33,15 @@ function AppContent() {
     const { user: currentUser, isLoading: sessionLoading, error: sessionError, signOut, refreshSession } = useSession();
     const [loginError, setLoginError] = useState<string | null>(null);
 
+    // 💡 التعديل هنا: استخدام الأسماء الصحيحة المطابقة لـ AppContext تماماً
     const { 
         selectedBatchId, isLoading, isRamadanMode, selectBatch, batches, students, groups, attendance, lectures, courses,
         deviceBindingEnabled, absencePercentageEnabled, locationRestrictionEnabled,
         filteredStudents, filteredLectures, filteredAttendance, activeLecture, studentCourses, currentBatch,
         setBatches, setCourses, addStudent, updateStudent, updateGroupName, addGroupLocal, deleteGroupLocal, deleteAllGroupsLocal,
-        generateQrCode, manualAttendance, removeAttendance, resetStudentDevice, resetAllDevices, repeatPreviousAttendance,
+        generateQrCode, manualAttendance, removeAttendance, resetStudentDevice, resetAllDevices, repeatPreviousAttendance, recordAttendance,
         deleteLecture, deleteStudent, toggleDeviceBinding, toggleAbsencePercentage, toggleLocationRestriction,
-        clearLectureAttendance, clearAllAttendance, clearAllLectures, recalculateSerials, refreshStudents, recordAttendance, toggleRamadanMode
+        clearLectureAttendance, clearAllAttendance, clearAllLectures, recalculateSerials, refreshStudents, toggleRamadanMode
     } = useAppState();
 
     if (!supabase) {
@@ -198,8 +199,8 @@ function AppContent() {
                             allStudents={safeStudents} 
                             attendanceRecords={safeAttendanceRecords}
                             groups={safeGroups}
-                            currentBatch={currentBatch} // 👈 تأكد من إضافة هذا السطر ليمرر "كائن" الدفعة
-                            onRecordAttendance={recordAttendance}
+                            currentBatch={currentBatch}
+                            onRecordAttendance={recordAttendance} onManualAttendance={manualAttendance} onRemoveAttendance={removeAttendance}
                             onUpdateStudent={updateStudent} onUpdateGroupName={updateGroupName} onAddGroupLocal={addGroupLocal} onDeleteGroupLocal={deleteGroupLocal}
                             activeLecture={activeLecture} lectures={safeLectures} courses={safeStudentCourses}
                             onGenerateQrCode={generateQrCode} onDeleteLecture={deleteLecture}
