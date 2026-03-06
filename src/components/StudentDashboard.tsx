@@ -1044,16 +1044,22 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-6">
                             <div className="backdrop-blur-xl border p-6 sm:p-8 rounded-[2rem] shadow-xl bg-slate-900/40 border-slate-800">
-                                <div className="flex justify-between mb-8"><h2 className="text-2xl font-black text-white">سجل الدفعة العام</h2>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!managementSelectedLectureId} className="px-4 py-2 bg-red-600/10 text-red-500 font-bold rounded-xl disabled:opacity-50">مسح التحضير</button>
-                                        <button onClick={handleExportPdf} disabled={!managementSelectedLectureId || isExportingPdf} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50">PDF</button>
-                                        <button onClick={() => setDeleteLectureModalOpen(true)} disabled={!managementSelectedLectureId} className="px-4 py-2 bg-red-600 text-white font-bold rounded-xl disabled:opacity-50">حذف المحاضرة</button>
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                                    <h2 className="text-2xl font-black text-white">سجل الدفعة العام</h2>
+                                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                        <button onClick={() => setClearAttendanceModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-600 hover:text-white font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50">
+                                            <TrashIcon className="w-4 h-4" /> <span className="hidden sm:inline">مسح التحضير</span>
+                                        </button>
+                                        <button onClick={() => setRepeatModalOpen(true)} disabled={!managementSelectedLectureId} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-purple-500/20 text-purple-500 hover:bg-purple-500/30' : 'bg-purple-600 text-white hover:bg-purple-700'}`}>
+                                            <CopyIcon className="w-4 h-4" /> <span className="hidden sm:inline">تكرار الحضور</span>
+                                        </button>
+                                        <button onClick={handleExportPdf} disabled={!managementSelectedLectureId || isExportingPdf} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'bg-yellow-500 text-slate-900' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                            {isExportingPdf ? 'جاري التصدير...' : <><span className="hidden sm:inline">تصدير PDF</span><span className="sm:hidden">PDF</span></>}
+                                        </button>
+                                        <button onClick={() => setDeleteLectureModalOpen(true)} disabled={!managementSelectedLectureId} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold text-xs sm:text-sm transition-all transform-gpu disabled:opacity-50">
+                                            <TrashIcon className="w-4 h-4" /> <span className="hidden sm:inline">حذف المحاضرة</span>
+                                        </button>
                                     </div>
-                                </div>
-                                <div className="flex gap-4 mb-6">
-                                    <select value={selectedDateFilter} onChange={(e) => setSelectedDateFilter(e.target.value)} className="flex-1 bg-slate-800 text-white p-3 rounded-xl">{uniqueLectureDates.map(d => <option key={d} value={d}>{d}</option>)}</select>
-                                    <select value={managementSelectedLectureId || ''} onChange={(e) => setManagementSelectedLectureId(e.target.value)} className="flex-2 bg-slate-800 text-white p-3 rounded-xl">{filteredLectures.map(l => <option key={l.qrCode} value={l.qrCode}>{l.courseName}</option>)}</select>
                                 </div>
 
                                 {/* 💡 البطاقة الذكية السريعة للتحضير (Flashcard) */}

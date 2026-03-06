@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast, useToasterStore } from 'react-hot-toast';
 import { UserRole } from './types';
 import { login as apiLogin } from './services/api';
 import { supabase } from './services/supabaseClient';
@@ -30,6 +30,16 @@ const DashboardSkeleton = ({ isRamadanMode }: { isRamadanMode: boolean }) => (
 
 function AppContent() {
     useTheme(); 
+    const { toasts } = useToasterStore();
+
+    // 💡 تحديد الإشعارات بـ 3 فقط ومسح القديم فوراً
+    React.useEffect(() => {
+        toasts
+            .filter((t) => t.visible)
+            .filter((_, i) => i >= 3)
+            .forEach((t) => toast.dismiss(t.id));
+    }, [toasts]);
+
     const { user: currentUser, isLoading: sessionLoading, error: sessionError, signOut, refreshSession } = useSession();
     const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -138,7 +148,7 @@ function AppContent() {
             <Toaster 
                 position="top-center" 
                 toastOptions={{
-                    duration: 4000,
+                    duration: 2000,
                     style: { 
                         background: isRamadanMode ? '#1a1005' : '#1e293b', 
                         color: isRamadanMode ? '#D4AF37' : '#fff', 
