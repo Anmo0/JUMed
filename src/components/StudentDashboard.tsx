@@ -1248,13 +1248,19 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <label className="text-xs font-bold text-gray-400 px-1">البحث عن طلاب</label>
                         <input type="text" value={studentSearchQuery} onChange={(e) => setStudentSearchQuery(e.target.value)} className="w-full px-4 py-2 text-sm border-2 rounded-xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none mb-3" placeholder="بحث بالاسم أو الرقم الجامعي..." />
                         <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                            {allStudents.filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).map(s => (
+                            {/* 💡 التعديل هنا: تمت إزالة شرط إخفاء المستخدم الحالي ليتمكن الليدر من إضافة نفسه */}
+                            {allStudents.filter(s => !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).map(s => (
                                 <div key={s.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                                    <div><p className="text-white font-bold text-sm">{s.name}</p><p className="text-gray-500 text-xs">{s.universityId}</p></div>
+                                    <div>
+                                        <p className="text-white font-bold text-sm">
+                                            {s.name} {s.id === student?.id && <span className="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full ms-2 border border-blue-500/20">أنت</span>}
+                                        </p>
+                                        <p className="text-gray-500 text-xs">{s.universityId}</p>
+                                    </div>
                                     <button type="button" onClick={() => { const newSet = new Set(selectedMemberIds); if (newSet.has(s.id)) newSet.delete(s.id); else newSet.add(s.id); setSelectedMemberIds(newSet); }} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all transform-gpu ${selectedMemberIds.has(s.id) ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}`}>{selectedMemberIds.has(s.id) ? 'محدد' : 'تحديد'}</button>
                                 </div>
                             ))}
-                            {allStudents.filter(s => s.id !== student?.id && !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).length === 0 && <div className="text-center py-4 text-gray-500 text-sm">لا يوجد طلاب متاحين للبحث</div>}
+                            {allStudents.filter(s => !s.groupId && (s.name.includes(debouncedSearchQuery) || s.universityId.includes(debouncedSearchQuery))).length === 0 && <div className="text-center py-4 text-gray-500 text-sm">لا يوجد طلاب متاحين للبحث</div>}
                         </div>
                     </div>
                     <div className="pt-4 flex gap-3">
