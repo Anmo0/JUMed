@@ -10,6 +10,7 @@ export interface Batch {
     currentYear: number;
     isArchived: boolean;
     studentCount?: number; // إحصائية عدد الطلاب (إضافة جديدة)
+    lastAbsenceRate?: number; // 👈 إضافة هذا السطر
 }
 
 export interface Group {

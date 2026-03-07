@@ -191,20 +191,23 @@ export const recalculateAllSerialNumbers = async (): Promise<void> => {
 import { Batch } from '../types';
 
 export const getBatches = async (): Promise<Batch[]> => {
-    // جلب الدفعات مع أعداد الطلاب لحل مشكلة اختفاء الأرقام
     const { data, error } = await supabase.from('batches').select('*, students(count)');
-    if (error || !data) {
-        return [];
-    }
+    if (error || !data) return [];
     
     return data.map((b: any) => ({
         id: b.id,
         batchName: b.batch_name || 'دفعة بدون اسم',
         currentYear: b.current_year,
         isArchived: b.is_archived,
-        studentCount: b.students && b.students.length > 0 ? b.students[0].count : 0
+        studentCount: b.students && b.students.length > 0 ? b.students[0].count : 0,
+        lastAbsenceRate: b.last_absence_rate || 0 // 👈 السطر الجديد
     }));
 }
+
+// 👈 الدالة الجديدة لتحديث النسبة في الخلفية بصمت
+export const updateBatchAbsenceRate = async (batchId: string, rate: number): Promise<void> => {
+    await supabase.from('batches').update({ last_absence_rate: rate }).eq('id', batchId);
+};
 
 export const saveBatches = async (batches: Batch[]): Promise<void> => {
     for (const batch of batches) {

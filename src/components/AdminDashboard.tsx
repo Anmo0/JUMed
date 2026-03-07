@@ -4,6 +4,7 @@ import Modal from './Modal';
 import { UsersIcon, ClipboardListIcon, EditIcon, CheckCircleIcon, XCircleIcon, AlertTriangleIcon, UnplugIcon, CalendarIcon, CopyIcon, TrashIcon } from './icons';
 import { 
     getBatches, 
+    updateBatchAbsenceRate, // 👈 أضف هذه
     promoteBatches, 
     deleteBatchData, 
     createBatches, 
@@ -330,6 +331,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         };
     }, [students, lectures, attendanceRecords, courses]);
 
+    // 💡 المحرك الذكي لحفظ آخر نسبة غياب
+    useEffect(() => {
+        if (selectedBatchId && batchStats && batchStats.absenceRate !== undefined) {
+            const currentBatch = batches.find(b => b.id === selectedBatchId);
+            const newRate = Number(batchStats.absenceRate);
+            
+            // إذا اختلفت النسبة المحسوبة الآن عن النسبة المخزنة سابقاً، نقوم بتحديثها
+            if (currentBatch && currentBatch.lastAbsenceRate !== newRate) {
+                // 1. تحديث الواجهة فوراً
+                setBatches(prev => prev.map(b => b.id === selectedBatchId ? { ...b, lastAbsenceRate: newRate } : b));
+                // 2. تحديث قاعدة البيانات في الخلفية بصمت
+                updateBatchAbsenceRate(selectedBatchId, newRate);
+            }
+        }
+    }, [selectedBatchId, batchStats, batches, setBatches]);
+
     useEffect(() => {
         if (courses.length > 0 && !selectedCourseId) {
             const savedCourseId = localStorage.getItem('lastSelectedCourseId');
@@ -559,34 +576,73 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
                         <div className="bg-slate-800/50 rounded-3xl border border-slate-700/50 p-6 animate-fade-in">
                             <h3 className="text-xl font-bold text-white mb-6">نظرة عامة على الدفعات</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {batches.map(batch => (
-                                    <div key={batch.id} onClick={() => onChangeBatch(batch.id)} className={`cursor-pointer bg-slate-900/50 border p-4 rounded-2xl flex flex-col gap-2 transition-all transform-gpu ${batch.id === selectedBatchId ? 'border-blue-500/50 shadow-lg shadow-blue-500/10' : 'border-slate-700 hover:border-slate-500'}`}>
-                                        <div className="flex justify-between items-center">
-                                            <p className="font-bold text-white text-lg">{batch.batchName}</p>
-                                            <span className={`text-[10px] px-2 py-1 rounded-full border ${batch.isArchived ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
-                                                {batch.isArchived ? 'مؤرشف' : 'نشط'}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2 border-t border-slate-800">
-                                            <span>عدد الطلاب:</span>
-                                            <span className="font-mono font-bold text-gray-300">
-                                                {batch.id === selectedBatchId ? batchStats?.studentCount : batch.studentCount || '--'}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs text-gray-400">
-                                            <span>متوسط الغياب:</span>
-                                            <span className="font-mono font-bold text-gray-300">
-                                                {batch.id === selectedBatchId ? (batchStats?.absenceRate || 0) + '%' : '--'}
-                                            </span>
-                                        </div>
-                                        {batch.id === selectedBatchId && (
-                                            <div className="mt-2 text-center">
-                                                <span className="text-[10px] text-blue-400 font-bold">أنت تشاهد هذه الدفعة الآن</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {batches.map(batch => {
+                                    const isSelected = batch.id === selectedBatchId;
+                                    const isFemale = batch.batchName.includes('طالبات');
+                                    
+                                    return (
+                                        <div 
+                                            key={batch.id} 
+                                            onClick={() => onChangeBatch(batch.id)} 
+                                            className={`cursor-pointer border p-5 rounded-[1.5rem] flex flex-col gap-3 transition-all duration-300 transform-gpu hover:-translate-y-1 hover:shadow-xl ${
+                                                isSelected 
+                                                    ? (isRamadanMode ? 'bg-yellow-500/10 border-yellow-500 shadow-yellow-500/20' : 'bg-blue-600/10 border-blue-500 shadow-blue-600/20') 
+                                                    : 'bg-slate-900/50 border-slate-700/50 hover:border-slate-500'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2.5 rounded-xl ${
+                                                        isSelected 
+                                                            ? (isRamadanMode ? 'bg-yellow-500 text-slate-900' : 'bg-blue-500 text-white') 
+                                                            : (isFemale ? 'bg-pink-500/10 text-pink-500' : 'bg-blue-500/10 text-blue-500')
+                                                    }`}>
+                                                        <UsersIcon className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <p className={`font-black text-lg leading-tight ${isSelected ? (isRamadanMode ? 'text-yellow-500' : 'text-blue-400') : 'text-white'}`}>
+                                                            {batch.batchName}
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-400 font-bold mt-0.5">السنة الدراسية {batch.currentYear}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-[10px] px-2.5 py-1 rounded-full border font-bold ${
+                                                    batch.isArchived 
+                                                        ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' 
+                                                        : 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                }`}>
+                                                    {batch.isArchived ? 'مؤرشف' : 'نشط'}
+                                                </span>
                                             </div>
-                                        )}
-                                    </div>
-                                ))}
+
+                                            <div className={`flex items-center gap-4 mt-2 p-3 rounded-xl border ${isSelected ? 'bg-slate-900/40 border-slate-700/50' : 'bg-slate-800/40 border-slate-700/30'}`}>
+                                                <div className="flex-1">
+                                                    <p className="text-[10px] text-gray-400 font-bold mb-1">الطلاب المسجلين</p>
+                                                    <p className="font-black text-white text-lg font-mono">
+                                                        {isSelected ? batchStats?.studentCount : (batch.studentCount || 0)}
+                                                    </p>
+                                                </div>
+                                                
+                                                {/* 💡 التحديث هنا: عرض النسبة المحفوظة للجميع */}
+                                                <div className="flex-1 border-r border-slate-700/50 pr-4 rtl:pl-4 rtl:pr-0 rtl:border-r-0 rtl:border-l">
+                                                    <p className="text-[10px] text-gray-400 font-bold mb-1">متوسط الغياب</p>
+                                                    <p className="font-black text-red-400 text-lg font-mono">
+                                                        {isSelected ? (batchStats?.absenceRate || 0) : (batch.lastAbsenceRate || 0)}%
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            
+                                            {isSelected && (
+                                                <div className="text-center mt-1">
+                                                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                        أنت تشاهد هذه الدفعة الآن
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </>
