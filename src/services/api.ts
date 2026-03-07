@@ -891,23 +891,33 @@ export const addLecture = async (newLecture: Lecture): Promise<MutationResult<Le
 
 export const deleteLecture = async (lectureId: string): Promise<MutationResult<null>> => {
     try {
+        // 1. تحديد الـ UUID الحقيقي للمحاضرة
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lectureId);
-        let realLectureId = lectureId;
+        let realUuid = lectureId;
+
         if (!isUuid) {
-            const { data: lec } = await supabase.from('lectures').select('id').eq('qr_code', lectureId).maybeSingle();
+            const { data: lec } = await supabase
+                .from('lectures')
+                .select('id')
+                .eq('qr_code', lectureId)
+                .maybeSingle();
+            
             if (!lec) return { data: null, error: 'المحاضرة غير موجودة.' };
-            realLectureId = lec.id;
+            realUuid = lec.id;
         }
 
-        // حذف سجلات الحضور أولاً ثم المحاضرة (لتجنب أخطاء الربط)
-        const { error: attendanceError } = await supabase.from('attendance').delete().eq('lecture_id', realLectureId);
-        if (attendanceError) return { data: null, error: `فشل حذف سجلات الحضور: ${attendanceError.message}` };
+        // 2. حذف سجلات الحضور باستخدام الـ UUID الحقيقي (هذا هو الأهم)
+        await supabase.from('attendance').delete().eq('lecture_id', realUuid);
 
-        const { error: lectureError } = await supabase.from('lectures').delete().eq('id', realLectureId);
-        if (lectureError) return { data: null, error: `فشل حذف المحاضرة: ${lectureError.message}` };
+        // 3. حذف المحاضرة نفسها
+        const { error: lectureError } = await supabase.from('lectures').delete().eq('id', realUuid);
+        
+        if (lectureError) throw lectureError;
 
         return { data: null, error: null };
-    } catch (err: any) { return { data: null, error: `حدث خطأ: ${err.message}` }; }
+    } catch (err: any) { 
+        return { data: null, error: `فشل الحذف: ${err.message}` }; 
+    }
 };
 
 export const clearLectureAttendance = async (lectureIdentifier: string): Promise<MutationResult<null>> => {

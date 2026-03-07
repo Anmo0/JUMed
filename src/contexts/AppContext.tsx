@@ -13,7 +13,7 @@ import {
   addBulkAttendanceRecords as apiAddBulkAttendanceRecords, resetStudentDevice as apiResetStudentDevice,
   resetAllStudentsDevices as apiResetAllStudentsDevices, setDeviceBindingSetting as apiSetDeviceBindingSetting,
   setAbsencePercentageSetting as apiSetAbsencePercentageSetting, clearAllAttendance as apiClearAllAttendance,
-  clearAllLectures as apiClearAllLectures, recalculateAllSerialNumbers as apiRecalculateAllSerialNumbers,
+  clearBatchLectures as apiClearBatchLectures, recalculateAllSerialNumbers as apiRecalculateAllSerialNumbers,
   clearLectureAttendance as apiClearLectureAttendance
 } from '../services/api';
 import { supabase } from '../services/supabaseClient';
@@ -405,17 +405,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [state.students, user, updateState]);
 
+  // 1. تعديل دالة حذف محاضرة فردية
   const deleteLecture = useCallback(async (lectureId: string) => {
       const { error } = await apiDeleteLecture(lectureId);
-      if (error) toast.error(error);
-      else {
+      if (error) {
+          toast.error(error);
+      } else {
+          // 💡 السطر السحري: إجبار React Query على تحديث قائمة المحاضرات من قاعدة البيانات
+          await queryClient.invalidateQueries({ queryKey: ['lectures'] });
+          
           updateState(prev => ({
               lectures: (prev.lectures || []).filter(l => l.id !== lectureId && l.qrCode !== lectureId),
               attendance: (prev.attendance || []).filter(a => a.lectureId !== lectureId && a.lectureId !== lectureId)
           }));
           toast.success('تم حذف المحاضرة بنجاح');
       }
-  }, [updateState]);
+  }, [updateState, queryClient]); // تأكد من إضافة queryClient هنا
 
   const clearLectureAttendance = useCallback(async (lectureIdentifier: string) => {
       const lecture = state.lectures.find(l => l.id === lectureIdentifier || l.qrCode === lectureIdentifier);
@@ -563,7 +568,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clearAllLectures = useCallback(async (courseId?: string) => {
     if (!state.selectedBatchId) return;
 
-    // 1. أخذ نسخة احتياطية للمقرر المحدد فقط
+    // 1. أخذ نسخة احتياطية للمقرر المحدد فقط في الدفعة المختارة (للمساعدة في التراجع)
     const lecturesToRestore = state.lectures.filter(l => 
         l.batchId === state.selectedBatchId && (!courseId || l.courseId === courseId)
     );
@@ -575,33 +580,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
     }
 
-    // 2. إخفاء البيانات من الواجهة فوراً
+    // 2. تحديث الواجهة فوراً (Optimistic UI) لإعطاء شعور بالسرعة
     updateState(prev => ({
         lectures: prev.lectures.filter(l => !lectureIds.has(l.id)),
         attendance: prev.attendance.filter(a => !lectureIds.has(a.lectureId))
     }));
 
-    // 3. مؤقت الحذف الفعلي
+    // 3. إعداد مؤقت الحذف الفعلي (بعد 6 ثوانٍ)
     const deleteTimer = setTimeout(async () => {
-        await apiClearBatchLectures(state.selectedBatchId!, courseId);
+        const { error } = await apiClearBatchLectures(state.selectedBatchId!, courseId);
+        
+        if (error) {
+            // في حال فشل الحذف في السيرفر، نعيد البيانات للواجهة وننبه المستخدم
+            updateState(prev => ({
+                lectures: [...prev.lectures, ...lecturesToRestore],
+                attendance: [...prev.attendance, ...attendanceToRestore]
+            }));
+            toast.error('فشل الحذف النهائي من السيرفر: ' + error);
+        } else {
+            // 💡 السطر السحري: إفراغ الكاش لضمان عدم عودة البيانات المحذوفة أبداً
+            await queryClient.invalidateQueries({ queryKey: ['lectures'] });
+            await queryClient.invalidateQueries({ queryKey: ['attendance'] });
+        }
     }, 6000);
 
-    // 4. رسالة التراجع
+    // 4. إظهار رسالة التراجع السحرية
     toast((t) => (
         <div className="flex items-center justify-between w-full gap-4 font-bold text-sm text-right" style={{ direction: 'rtl' }}>
             <span className="text-white">تم مسح محاضرات المقرر 🗑️</span>
-            <button onClick={() => {
-                toast.dismiss(t.id);
-                clearTimeout(deleteTimer);
-                updateState(prev => ({
-                    lectures: [...prev.lectures, ...lecturesToRestore],
-                    attendance: [...prev.attendance, ...attendanceToRestore]
-                }));
-                toast.success('تم التراجع عن المسح ♻️');
-            }} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-1.5 rounded-lg border border-slate-500 shadow-lg">تراجع</button>
+            <button
+                onClick={() => {
+                    toast.dismiss(t.id);
+                    clearTimeout(deleteTimer); // إلغاء الحذف من السيرفر
+                    
+                    // استعادة البيانات في الواجهة فوراً
+                    updateState(prev => ({
+                        lectures: [...prev.lectures, ...lecturesToRestore],
+                        attendance: [...prev.attendance, ...attendanceToRestore]
+                    }));
+                    toast.success('تم التراجع عن المسح ♻️');
+                }}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-1.5 rounded-lg border border-slate-500 shadow-lg transition-all"
+            >
+                تراجع
+            </button>
         </div>
-    ), { duration: 6000, position: 'bottom-center', id: 'undo-clear-all' });
-  }, [state.lectures, state.attendance, state.selectedBatchId, updateState]);
+    ), { 
+        duration: 6000, 
+        position: 'bottom-center', 
+        id: 'undo-clear-all',
+        style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' }
+    });
+
+  }, [state.lectures, state.attendance, state.selectedBatchId, updateState, queryClient]);
 
   const recalculateSerials = useCallback(async () => {
     if (!window.confirm('إعادة احتساب الأرقام التسلسلية؟')) return;
