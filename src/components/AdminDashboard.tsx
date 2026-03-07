@@ -1569,12 +1569,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                 </div>
 
                                                 {/* أدوات التحكم في الحضور */}
-                                                <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
+                                                <div className="flex flex-wrap justify-between items-center gap-5 mb-10 sm:mb-12"> {/* 💡 هنا زدنا المسافة السفلية بشكل متناسق */}
                                                     <div className="w-full sm:w-72">
                                                         <select 
                                                             value={selectedLectureId || ''}
                                                             onChange={(e) => setSelectedLectureId(e.target.value)}
-                                                            className="block w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none transition-all disabled:opacity-50"
+                                                            className="block w-full px-4 py-3 border-2 rounded-2xl bg-slate-800 border-slate-700 text-white focus:border-blue-500 focus:outline-none transition-all disabled:opacity-50 shadow-sm"
                                                             disabled={!selectedDateFilter || filteredLectures.length === 0}
                                                         >
                                                             {filteredLectures.length === 0 ? (
@@ -1593,7 +1593,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         <button 
                                                             onClick={() => setClearAttendanceModalOpen(true)}
                                                             disabled={!selectedLectureId}
-                                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all transform-gpu disabled:opacity-50"
+                                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-orange-600/10 border border-orange-500/20 text-orange-500 hover:bg-orange-500 hover:text-white transition-all transform-gpu disabled:opacity-50"
                                                             title="تصفير تحضير المحاضرة المختارة"
                                                         >
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
@@ -1601,16 +1601,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                                         </button>
                                                         
                                                         <button 
-                                                            onClick={() => { 
-                                                                // 💡 التعديل هنا: أضف حرف "on" في بداية اسم الدالة
-                                                                onClearAllLectures(selectedCourseId); 
-                                                                setClearLecturesModalOpen(false); 
-                                                            }} 
-                                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all transform-gpu"
-                                                            title="مسح محاضرات المقرر المختار فقط"
+                                                            onClick={() => setDeleteLectureModalOpen(true)}
+                                                            disabled={!selectedLectureId}
+                                                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all transform-gpu disabled:opacity-50"
+                                                            title="حذف المحاضرة المختارة نهائياً"
                                                         >
                                                             <TrashIcon className="w-5 h-5" />
-                                                            <span className="text-sm font-bold hidden sm:inline">مسح محاضرات المقرر</span>
+                                                            <span className="text-sm font-bold hidden sm:inline">حذف المحاضرة</span>
                                                         </button>
 
                                                         <button onClick={handleExportPdf} disabled={!selectedLectureId || isExportingPdf} className={`flex-[2] sm:flex-none font-bold px-6 py-3 rounded-2xl shadow-lg transition-all transform-gpu disabled:opacity-50 ${isRamadanMode ? 'ramadan-btn-gold' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}>
@@ -1750,7 +1747,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
+                                                <div className="flex flex-wrap justify-between items-center gap-4 mb-10 sm:mb-12">
                                                     <h2 className={`text-xl sm:text-2xl font-black ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>إدارة الطلاب</h2>
                                                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                                                         <button 
