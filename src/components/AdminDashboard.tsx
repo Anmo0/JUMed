@@ -489,228 +489,162 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
    const renderDashboardTab = () => {
         return (
             <div className="space-y-6">
-                {!selectedBatchId ? (
-                    <div className={`backdrop-blur-2xl border rounded-[2rem] p-6 sm:p-10 text-center space-y-8 animate-fade-in shadow-2xl ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/60 border-slate-800'}`}>
-                        <div className="max-w-5xl mx-auto">
-                            <div className="mb-10">
-                                <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 shadow-xl transform-gpu transition-transform hover:scale-110 ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-blue-600/10 text-blue-500 border border-blue-500/20'}`}>
-                                    <UsersIcon className="w-8 h-8" />
+                {/* 💡 الإحصائيات الأربعة تظهر في الأعلى فقط إذا كانت هناك دفعة محددة */}
+                {selectedBatchId && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in mb-8">
+                        <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-500">
+                                    <UsersIcon className="w-6 h-6" />
                                 </div>
-                                <h2 className={`text-2xl sm:text-3xl font-black mb-2 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>لوحة القيادة</h2>
-                                <p className="text-gray-400 text-sm font-medium">اختر السنة الدراسية والشعبة للمتابعة وإدارة شؤون الطلاب</p>
+                                <div>
+                                    <p className="text-gray-400 text-xs font-bold">إجمالي الطلاب (الحالي)</p>
+                                    <p className="text-2xl font-black text-white">{students.length}</p>
+                                </div>
                             </div>
-                            
-                            {/* 💡 شبكة ثنائية الأعمدة: كل سنتين في صف واحد */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
-                                {groupedBatches.filter(g => !g.isArchived).map(group => (
-                                    <div key={group.name} className="relative overflow-hidden bg-slate-800/40 border border-slate-700/60 rounded-[1.75rem] p-1 shadow-md hover:border-slate-500/50 transition-all duration-300 group/year">
-                                        {/* شريط زينة جانبي */}
-                                        <div className={`absolute top-0 bottom-0 right-0 w-1.5 opacity-50 group-hover/year:opacity-100 transition-opacity ${isRamadanMode ? 'bg-yellow-500' : 'bg-blue-600'}`}></div>
-
-                                        <div className="p-5 sm:p-6 pl-6">
-                                            {/* رأس السنة الدراسية */}
-                                            <div className="flex items-center gap-4 mb-5 border-b border-slate-700/50 pb-5 pr-3">
-                                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl border shadow-inner ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
-                                                    {group.year}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-black text-white text-xl">السنة الدراسية {group.year}</h3>
-                                                    <p className="text-xs text-gray-500 font-bold mt-1 tracking-wide">دفعة {group.name}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* مستطيلات الشعب (طلاب/طالبات) */}
-                                            <div className="flex flex-col gap-3">
-                                                {group.male && (
-                                                    <button 
-                                                        onClick={() => { onChangeBatch(group.male!.id); setActiveTab('attendance'); }} 
-                                                        className="flex items-center justify-between p-4 bg-slate-900/50 border border-blue-500/10 hover:border-blue-500/40 rounded-2xl transition-all duration-300 transform-gpu hover:-translate-x-1 group/btn"
-                                                    >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl group-hover/btn:bg-blue-500 group-hover/btn:text-white transition-all">
-                                                                <UsersIcon className="w-5 h-5" />
-                                                            </div>
-                                                            <span className="font-black text-white text-base">شعبة الطلاب</span>
-                                                        </div>
-                                                        <div className="flex flex-col items-center bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                                                            <span className="text-white font-black text-base leading-none">{group.male.studentCount || 0}</span>
-                                                            <span className="text-[9px] text-gray-500 font-bold">طالب</span>
-                                                        </div>
-                                                    </button>
-                                                )}
-
-                                                {group.female && (
-                                                    <button 
-                                                        onClick={() => { onChangeBatch(group.female!.id); setActiveTab('attendance'); }} 
-                                                        className="flex items-center justify-between p-4 bg-slate-900/50 border border-pink-500/10 hover:border-pink-500/40 rounded-2xl transition-all duration-300 transform-gpu hover:-translate-x-1 group/btn"
-                                                    >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="p-2.5 bg-pink-500/10 text-pink-400 rounded-xl group-hover/btn:bg-pink-500 group-hover/btn:text-white transition-all">
-                                                                <UsersIcon className="w-5 h-5" />
-                                                            </div>
-                                                            <span className="font-black text-white text-base">شعبة الطالبات</span>
-                                                        </div>
-                                                        <div className="flex flex-col items-center bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                                                            <span className="text-white font-black text-base leading-none">{group.female.studentCount || 0}</span>
-                                                            <span className="text-[9px] text-gray-500 font-bold">طالبة</span>
-                                                        </div>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                        </div>
+                        
+                        <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-500">
+                                    <ClipboardListIcon className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-gray-400 text-xs font-bold">المحاضرات (الحالي)</p>
+                                    <p className="text-2xl font-black text-white">{lectures.length}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400 text-xs font-bold">المقررات (الحالي)</p>
+                                    <p className="text-2xl font-black text-white">{courses.length}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="p-3 rounded-2xl bg-red-500/10 text-red-500">
+                                    <AlertTriangleIcon className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-gray-400 text-xs font-bold">متوسط الغياب (الحالي)</p>
+                                    <p className="text-2xl font-black text-white">{batchStats?.absenceRate || 0}%</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
-                            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
-                                <div className="flex items-center gap-4 mb-2">
-                                    <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-500">
-                                        <UsersIcon className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs font-bold">إجمالي الطلاب (الحالي)</p>
-                                        <p className="text-2xl font-black text-white">{students.length}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
-                                <div className="flex items-center gap-4 mb-2">
-                                    <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-500">
-                                        <ClipboardListIcon className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs font-bold">المحاضرات (الحالي)</p>
-                                        <p className="text-2xl font-black text-white">{lectures.length}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
-                                <div className="flex items-center gap-4 mb-2">
-                                    <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs font-bold">المقررات (الحالي)</p>
-                                        <p className="text-2xl font-black text-white">{courses.length}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
-                                <div className="flex items-center gap-4 mb-2">
-                                    <div className="p-3 rounded-2xl bg-red-500/10 text-red-500">
-                                        <AlertTriangleIcon className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs font-bold">متوسط الغياب (الحالي)</p>
-                                        <p className="text-2xl font-black text-white">{batchStats?.absenceRate || 0}%</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-4 sm:p-5 animate-fade-in">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-bold text-white">نظرة عامة على الدفعات</h3>
-                                <span className="text-[9px] text-gray-500 font-bold bg-slate-900/50 px-2.5 py-1 rounded-full border border-slate-800">
-                                    مرتبة حسب السنة الدراسية
-                                </span>
-                            </div>
-
-                            <div className="space-y-4"> {/* 💡 تقليل المسافة العمودية بين كل سنة دراسية والأخرى */}
-                                {groupedBatches.filter(g => !g.isArchived).map(group => (
-                                    <div key={group.name} className="space-y-2.5">
-                                        {/* عنوان السنة الدراسية كفاصل أنيق (بحجم أصغر) */}
-                                        <div className="flex items-center gap-3 px-1">
-                                            <span className="text-[10px] font-black text-blue-400 whitespace-nowrap bg-blue-500/10 px-2.5 py-0.5 rounded-md border border-blue-500/20">
-                                                السنة {group.year}
-                                            </span>
-                                            <div className="h-px flex-1 bg-gradient-to-l from-slate-800 to-transparent"></div>
-                                        </div>
-
-                                        {/* شبكة تعرض شطري السنة في صف واحد (بحجم أنحف) */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                                            {[group.male, group.female].map(batch => {
-                                                if (!batch) return null;
-                                                
-                                                const isSelected = batch.id === selectedBatchId;
-                                                const isFemale = batch.batchName.includes('طالبات');
-                                                
-                                                return (
-                                                    <div 
-                                                        key={batch.id} 
-                                                        onClick={() => onChangeBatch(batch.id)} 
-                                                        className={`cursor-pointer border p-3.5 rounded-2xl flex flex-col gap-2 transition-all duration-300 transform-gpu hover:-translate-y-0.5 hover:shadow-lg group ${
-                                                            isSelected 
-                                                                ? (isRamadanMode ? 'bg-yellow-500/10 border-yellow-500 shadow-yellow-500/20' : 'bg-blue-600/10 border-blue-500 shadow-blue-600/20') 
-                                                                : 'bg-slate-900/50 border-slate-700/50 hover:border-slate-500'
-                                                        }`}
-                                                    >
-                                                        <div className="flex justify-between items-start">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <div className={`p-2 rounded-xl transition-colors ${
-                                                                    isSelected 
-                                                                        ? (isRamadanMode ? 'bg-yellow-500 text-slate-900' : 'bg-blue-500 text-white') 
-                                                                        : (isFemale ? 'bg-pink-500/10 text-pink-500' : 'bg-blue-500/10 text-blue-500')
-                                                                }`}>
-                                                                    <UsersIcon className="w-4 h-4" /> {/* 💡 أيقونات أصغر */}
-                                                                </div>
-                                                                <div>
-                                                                    <p className={`font-black text-sm sm:text-base leading-tight transition-colors ${isSelected ? (isRamadanMode ? 'text-yellow-500' : 'text-blue-400') : 'text-white group-hover:text-blue-400'}`}>
-                                                                        {batch.batchName}
-                                                                    </p>
-                                                                    <p className="text-[9px] text-gray-500 font-bold mt-0.5 tracking-tight">الدفعات الحالية</p>
-                                                                </div>
-                                                            </div>
-                                                            <span className={`text-[8px] sm:text-[9px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-wider ${
-                                                                batch.isArchived 
-                                                                    ? 'bg-gray-500/10 text-gray-400 border-gray-500/20' 
-                                                                    : 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                            }`}>
-                                                                {batch.isArchived ? 'مؤرشف' : 'نشط'}
-                                                            </span>
-                                                        </div>
-
-                                                        {/* صندوق الإحصائيات المستطيل (مضغوط أكثر) */}
-                                                        <div className={`flex items-center gap-3 mt-1 p-2.5 rounded-xl border transition-all ${isSelected ? 'bg-slate-900/60 border-slate-700/50' : 'bg-slate-800/40 border-slate-700/30'}`}>
-                                                            <div className="flex-1">
-                                                                <p className="text-[9px] text-gray-500 font-bold mb-0.5">الطلاب المسجلين</p>
-                                                                <p className="font-black text-white text-base font-mono leading-none">
-                                                                    {isSelected ? batchStats?.studentCount : (batch.studentCount || 0)}
-                                                                </p>
-                                                            </div>
-                                                            
-                                                            <div className="flex-1 border-r border-slate-700/50 pr-3 rtl:pl-3 rtl:pr-0 rtl:border-r-0 rtl:border-l">
-                                                                <p className="text-[9px] text-gray-500 font-bold mb-0.5">متوسط الغياب</p>
-                                                                <p className="font-black text-red-400 text-base font-mono leading-none">
-                                                                    {isSelected ? (batchStats?.absenceRate || 0) : (batch.lastAbsenceRate || 0)}%
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {isSelected && (
-                                                            <div className="text-center mt-0.5 animate-pulse">
-                                                                <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full ${isRamadanMode ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-400'}`}>
-                                                                    الدفعة النشطة حالياً
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </>
                 )}
+
+                {/* 💡 لوحة القيادة الرئيسية (قائمة السنوات) أصبحت تظهر دائماً! */}
+                <div className={`backdrop-blur-2xl border rounded-[2rem] p-6 sm:p-10 text-center space-y-8 animate-fade-in shadow-2xl ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/60 border-slate-800'}`}>
+                    <div className="max-w-5xl mx-auto">
+                        <div className="mb-10">
+                            <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 shadow-xl transform-gpu transition-transform hover:scale-110 ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-blue-600/10 text-blue-500 border border-blue-500/20'}`}>
+                                <UsersIcon className="w-8 h-8" />
+                            </div>
+                            <h2 className={`text-2xl sm:text-3xl font-black mb-2 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>لوحة القيادة</h2>
+                            <p className="text-gray-400 text-sm font-medium">اختر السنة الدراسية والشعبة للمتابعة وإدارة شؤون الطلاب</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
+                            {groupedBatches.filter(g => !g.isArchived).map(group => {
+                                // التحقق مما إذا كانت إحدى شعب هذه السنة هي المحددة حالياً
+                                const isYearActive = group.male?.id === selectedBatchId || group.female?.id === selectedBatchId;
+                                
+                                return (
+                                <div key={group.name} className={`relative overflow-hidden bg-slate-800/40 border rounded-[1.75rem] p-1 shadow-md transition-all duration-300 group/year ${isYearActive ? 'border-blue-500/50 shadow-blue-500/10' : 'border-slate-700/60 hover:border-slate-500/50'}`}>
+                                    {/* شريط زينة جانبي */}
+                                    <div className={`absolute top-0 bottom-0 right-0 w-1.5 opacity-50 group-hover/year:opacity-100 transition-opacity ${isRamadanMode ? 'bg-yellow-500' : 'bg-blue-600'}`}></div>
+
+                                    <div className="p-5 sm:p-6 pl-6">
+                                        {/* رأس السنة الدراسية */}
+                                        <div className="flex items-center gap-4 mb-5 border-b border-slate-700/50 pb-5 pr-3">
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl border shadow-inner ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
+                                                {group.year}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-white text-xl">السنة الدراسية {group.year}</h3>
+                                                <p className="text-xs text-gray-500 font-bold mt-1 tracking-wide">دفعة {group.name}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* مستطيلات الشعب (طلاب/طالبات) */}
+                                        <div className="flex flex-col gap-3">
+                                            {group.male && (() => {
+                                                const isSelected = group.male.id === selectedBatchId;
+                                                return (
+                                                <button 
+                                                    onClick={() => { onChangeBatch(group.male!.id); setActiveTab('attendance'); }} 
+                                                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-300 transform-gpu hover:-translate-x-1 group/btn border ${
+                                                        isSelected 
+                                                            ? (isRamadanMode ? 'bg-yellow-500/20 border-yellow-500/50 shadow-lg shadow-yellow-500/10' : 'bg-blue-600/20 border-blue-500/50 shadow-lg shadow-blue-600/10') 
+                                                            : 'bg-slate-900/50 border-blue-500/10 hover:border-blue-500/40'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`p-2.5 rounded-xl transition-all ${isSelected ? 'bg-blue-500 text-white' : 'bg-blue-500/10 text-blue-400 group-hover/btn:bg-blue-500 group-hover/btn:text-white'}`}>
+                                                            <UsersIcon className="w-5 h-5" />
+                                                        </div>
+                                                        <span className="font-black text-white text-base">شعبة الطلاب</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`flex flex-col items-center px-3 py-1.5 rounded-xl border ${isSelected ? 'bg-slate-900/80 border-blue-500/30' : 'bg-slate-950/60 border-slate-800'}`}>
+                                                            <span className="text-white font-black text-base leading-none">{isSelected ? batchStats?.studentCount : (group.male.studentCount || 0)}</span>
+                                                            <span className="text-[9px] text-gray-500 font-bold">طالب</span>
+                                                        </div>
+                                                        <div className={`flex flex-col items-center px-3 py-1.5 rounded-xl border ${isSelected ? 'bg-slate-900/80 border-blue-500/30' : 'bg-slate-950/60 border-slate-800'}`}>
+                                                            <span className="text-red-400 font-black text-base leading-none">{isSelected ? (batchStats?.absenceRate || 0) : (group.male.lastAbsenceRate || 0)}%</span>
+                                                            <span className="text-[9px] text-gray-500 font-bold">الغياب</span>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                                );
+                                            })()}
+
+                                            {group.female && (() => {
+                                                const isSelected = group.female.id === selectedBatchId;
+                                                return (
+                                                <button 
+                                                    onClick={() => { onChangeBatch(group.female!.id); setActiveTab('attendance'); }} 
+                                                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-300 transform-gpu hover:-translate-x-1 group/btn border ${
+                                                        isSelected 
+                                                            ? (isRamadanMode ? 'bg-yellow-500/20 border-yellow-500/50 shadow-lg shadow-yellow-500/10' : 'bg-pink-600/20 border-pink-500/50 shadow-lg shadow-pink-500/10') 
+                                                            : 'bg-slate-900/50 border-pink-500/10 hover:border-pink-500/40'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`p-2.5 rounded-xl transition-all ${isSelected ? 'bg-pink-500 text-white' : 'bg-pink-500/10 text-pink-400 group-hover/btn:bg-pink-500 group-hover/btn:text-white'}`}>
+                                                            <UsersIcon className="w-5 h-5" />
+                                                        </div>
+                                                        <span className="font-black text-white text-base">شعبة الطالبات</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`flex flex-col items-center px-3 py-1.5 rounded-xl border ${isSelected ? 'bg-slate-900/80 border-pink-500/30' : 'bg-slate-950/60 border-slate-800'}`}>
+                                                            <span className="text-white font-black text-base leading-none">{isSelected ? batchStats?.studentCount : (group.female.studentCount || 0)}</span>
+                                                            <span className="text-[9px] text-gray-500 font-bold">طالبة</span>
+                                                        </div>
+                                                        <div className={`flex flex-col items-center px-3 py-1.5 rounded-xl border ${isSelected ? 'bg-slate-900/80 border-pink-500/30' : 'bg-slate-950/60 border-slate-800'}`}>
+                                                            <span className="text-red-400 font-black text-base leading-none">{isSelected ? (batchStats?.absenceRate || 0) : (group.female.lastAbsenceRate || 0)}%</span>
+                                                            <span className="text-[9px] text-gray-500 font-bold">الغياب</span>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </div>
+                            )})}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     };
