@@ -282,10 +282,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
     const stats = useMemo(() => {
         const total = students.length;
-        const currentPresent = selectedLectureId ? attendanceRecords.filter(r => r.lectureId === selectedLectureId).length : 0;
+        let currentPresent = 0;
+        
+        if (selectedLectureId) {
+            // 💡 البحث عن المعرف الرقمي (UUID) الحقيقي للمحاضرة
+            const selectedLecture = lectures.find(l => l.qrCode === selectedLectureId || l.id === selectedLectureId);
+            const actualLectureId = selectedLecture?.id || selectedLectureId;
+            
+            // 💡 مطابقة الحضور باستخدام الـ UUID أو نص الباركود القديم
+            currentPresent = attendanceRecords.filter(r => r.lectureId === actualLectureId || r.lectureId === selectedLectureId).length;
+        }
+        
         const totalGroups = Array.from(new Set(students.map(s => s.groupId).filter(Boolean))).length;
         return { total, currentPresent, totalGroups };
-    }, [students, attendanceRecords, selectedLectureId]);
+    }, [students, attendanceRecords, selectedLectureId, lectures]);
 
     const batchStats = useMemo(() => {
         let totalAbsenceRate = 0;
