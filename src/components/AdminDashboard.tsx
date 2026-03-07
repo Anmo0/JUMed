@@ -490,35 +490,95 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         return (
             <div className="space-y-6">
                 {!selectedBatchId ? (
-                    <div className={`backdrop-blur-2xl border rounded-[2.5rem] p-8 text-center space-y-6 animate-fade-in ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/60 border-slate-800'}`}>
-                        <div className="max-w-2xl mx-auto">
-                            <UsersIcon className="w-16 h-16 text-blue-500 mx-auto mb-4 opacity-50" />
-                            <h2 className="text-2xl font-bold text-white mb-2">مرحباً بك في لوحة التحكم</h2>
-                            <p className="text-gray-400 mb-8">يرجى اختيار الدفعة والشعبة التي ترغب في إدارتها للبدء.</p>
+                    <div className={`backdrop-blur-2xl border rounded-[2.5rem] p-6 sm:p-10 text-center space-y-8 animate-fade-in shadow-2xl ${isRamadanMode ? 'ramadan-card' : 'bg-slate-900/60 border-slate-800'}`}>
+                        <div className="max-w-4xl mx-auto">
+                            <div className="mb-10">
+                                <div className={`w-20 h-20 mx-auto rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl transform-gpu transition-transform hover:scale-110 ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-blue-600/10 text-blue-500 border border-blue-500/20'}`}>
+                                    <UsersIcon className="w-10 h-10" />
+                                </div>
+                                <h2 className={`text-3xl sm:text-4xl font-black mb-4 ${isRamadanMode ? 'ramadan-text-gold' : 'text-white'}`}>مرحباً بك في لوحة القيادة</h2>
+                                <p className="text-gray-400 text-sm sm:text-base font-medium">يرجى اختيار السنة الدراسية والشطر للبدء في إدارة الحضور والمقررات.</p>
+                            </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-right">
+                            {/* 💡 الترتيب المنطقي الجديد: مستطيلات طولية حسب السنة */}
+                            <div className="flex flex-col gap-6 text-right">
                                 {groupedBatches.filter(g => !g.isArchived).map(group => (
-                                    <div key={group.name} className="p-5 bg-slate-800/50 hover:bg-slate-800/80 border border-slate-700 rounded-2xl transition-all shadow-lg">
-                                        <div className="flex justify-between items-center mb-4 border-b border-slate-700/50 pb-3">
-                                            <h3 className="font-black text-white text-xl">{group.name}</h3>
-                                            <span className="text-xs text-blue-400 font-bold bg-blue-500/10 px-3 py-1 rounded-full">السنة {group.year}</span>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            {group.male && (
-                                                <button onClick={() => { onChangeBatch(group.male!.id); setActiveTab('attendance'); }} className="flex-1 flex flex-col items-center justify-center bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 py-3 rounded-xl transition-all transform-gpu border border-blue-500/20 group/btn">
-                                                    <span className="font-black mb-1">الطلاب</span>
-                                                    <span className="text-[10px] text-gray-400 bg-slate-900/50 px-2 py-0.5 rounded-full">{group.male.studentCount || 0} طالب</span>
-                                                </button>
-                                            )}
-                                            {group.female && (
-                                                <button onClick={() => { onChangeBatch(group.female!.id); setActiveTab('attendance'); }} className="flex-1 flex flex-col items-center justify-center bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 py-3 rounded-xl transition-all transform-gpu border border-pink-500/20 group/btn">
-                                                    <span className="font-black mb-1">الطالبات</span>
-                                                    <span className="text-[10px] text-gray-400 bg-slate-900/50 px-2 py-0.5 rounded-full">{group.female.studentCount || 0} طالبة</span>
-                                                </button>
-                                            )}
+                                    <div key={group.name} className="relative overflow-hidden bg-slate-800/40 border border-slate-700/60 rounded-[2rem] p-1.5 shadow-lg hover:border-slate-500/50 transition-all duration-500 group/year">
+                                        {/* شريط زينة جانبي ملون */}
+                                        <div className={`absolute top-0 bottom-0 right-0 w-2 opacity-50 group-hover/year:opacity-100 transition-opacity ${isRamadanMode ? 'bg-gradient-to-b from-yellow-400 to-amber-600' : 'bg-gradient-to-b from-blue-500 to-indigo-600'}`}></div>
+
+                                        <div className="p-5 sm:p-6 pl-6">
+                                            {/* رأس المستطيل (رقم السنة واسم الدفعة) */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-700/50 pb-5 pr-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl border shadow-inner ${isRamadanMode ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
+                                                        {group.year}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-black text-white text-2xl">السنة الدراسية {group.year}</h3>
+                                                        <p className="text-sm text-gray-400 font-bold mt-1 tracking-wide">دفعة {group.name}</p>
+                                                    </div>
+                                                </div>
+                                                <span className="hidden sm:inline-flex px-4 py-1.5 bg-slate-900/50 text-gray-400 text-xs font-bold rounded-full border border-slate-700">
+                                                    إجمالي: {(group.male?.studentCount || 0) + (group.female?.studentCount || 0)} طالب وطالبة
+                                                </span>
+                                            </div>
+
+                                            {/* مستطيلات الطلاب والطالبات الداخلية */}
+                                            <div className="flex flex-col lg:flex-row gap-4">
+                                                {group.male && (
+                                                    <button 
+                                                        onClick={() => { onChangeBatch(group.male!.id); setActiveTab('attendance'); }} 
+                                                        className="flex-1 flex items-center justify-between p-5 bg-gradient-to-l from-blue-900/20 to-slate-900/40 border border-blue-500/20 hover:border-blue-400 hover:from-blue-800/30 rounded-[1.5rem] transition-all duration-300 transform-gpu hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20 group/btn"
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="p-3.5 bg-blue-500/10 text-blue-400 rounded-2xl group-hover/btn:scale-110 group-hover/btn:bg-blue-500 group-hover/btn:text-white transition-all">
+                                                                <UsersIcon className="w-6 h-6" />
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className="block font-black text-white text-lg mb-1">شطر الطلاب</span>
+                                                                <span className="text-xs text-blue-400/70 font-bold group-hover/btn:text-blue-300 transition-colors">إدارة الحضور والمقررات &larr;</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-center bg-slate-950/60 min-w-[4rem] px-4 py-2.5 rounded-2xl border border-slate-700/50 group-hover/btn:border-blue-500/30 transition-colors">
+                                                            <span className="block text-white font-black text-xl leading-none mb-1">{group.male.studentCount || 0}</span>
+                                                            <span className="text-[10px] text-gray-500 font-bold">مسجلين</span>
+                                                        </div>
+                                                    </button>
+                                                )}
+
+                                                {group.female && (
+                                                    <button 
+                                                        onClick={() => { onChangeBatch(group.female!.id); setActiveTab('attendance'); }} 
+                                                        className="flex-1 flex items-center justify-between p-5 bg-gradient-to-l from-pink-900/20 to-slate-900/40 border border-pink-500/20 hover:border-pink-400 hover:from-pink-800/30 rounded-[1.5rem] transition-all duration-300 transform-gpu hover:-translate-y-1 hover:shadow-xl hover:shadow-pink-900/20 group/btn"
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="p-3.5 bg-pink-500/10 text-pink-400 rounded-2xl group-hover/btn:scale-110 group-hover/btn:bg-pink-500 group-hover/btn:text-white transition-all">
+                                                                <UsersIcon className="w-6 h-6" />
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className="block font-black text-white text-lg mb-1">شطر الطالبات</span>
+                                                                <span className="text-xs text-pink-400/70 font-bold group-hover/btn:text-pink-300 transition-colors">إدارة الحضور والمقررات &larr;</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-center bg-slate-950/60 min-w-[4rem] px-4 py-2.5 rounded-2xl border border-slate-700/50 group-hover/btn:border-pink-500/30 transition-colors">
+                                                            <span className="block text-white font-black text-xl leading-none mb-1">{group.female.studentCount || 0}</span>
+                                                            <span className="text-[10px] text-gray-500 font-bold">مسجلات</span>
+                                                        </div>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
+                                
+                                {groupedBatches.filter(g => !g.isArchived).length === 0 && (
+                                    <div className="text-center py-16 border-2 border-dashed border-slate-700/50 rounded-[2rem] bg-slate-800/20">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                                        <p className="text-gray-400 font-bold text-lg mb-2">لا توجد سنوات دراسية نشطة</p>
+                                        <p className="text-gray-500 text-sm">قم بإضافة سنة دراسية جديدة من تبويب (الدفعات) للبدء.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
