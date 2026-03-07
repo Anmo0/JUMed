@@ -148,7 +148,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
 
   const { data: fetchedBatches } = useQuery({ queryKey: ['batches'], queryFn: getBatches });
-  const { data: fetchedLectures } = useQuery({ queryKey: ['lectures'], queryFn: getLectures });
+    // 💡 التعديل: ربط الاستعلام بالدفعة المختارة لضمان عدم التداخل
+  const { data: fetchedLectures } = useQuery({ 
+      queryKey: ['lectures', state.selectedBatchId], // إضافة المعرف لمفتاح الاستعلام لإعادة التحميل عند تغيير الدفعة
+      queryFn: () => getLectures(state.selectedBatchId || undefined), // تمرير المعرف للدالة
+      enabled: true // تأكد أن الاستعلام مفعّل دائماً أو عند اختيار دفعة
+  });
   const { data: fetchedAttendance } = useQuery({ queryKey: ['attendance'], queryFn: getAttendance });
 
   const { data: batchData } = useQuery({

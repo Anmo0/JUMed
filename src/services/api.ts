@@ -376,8 +376,16 @@ export const getAttendance = async (): Promise<AttendanceRecord[]> => {
     return data ? data.map(mapToAttendanceRecord) : [];
 };
 
-export const getLectures = async (): Promise<Lecture[]> => {
-    const { data, error } = await supabase.from('lectures').select('*');
+// 💡 التعديل: إضافة batchId كمعامل اختياري للفلترة
+export const getLectures = async (batchId?: string): Promise<Lecture[]> => {
+    let query = supabase.from('lectures').select('*');
+    
+    // إذا تم تمرير معرف الدفعة، نقوم بجلب محاضراتها فقط
+    if (batchId) {
+        query = query.eq('batch_id', batchId);
+    }
+    
+    const { data, error } = await query;
     if (error) {
         console.error('Supabase getLectures Error:', error.message);
         return [];
@@ -1225,17 +1233,24 @@ export const getDeviceBindingSetting = async (): Promise<boolean> => {
             .from('settings')
             .select('value')
             .eq('key', 'deviceBindingEnabled')
-            .maybeSingle();  // ✅ مهم!
+            .maybeSingle();
         
-        if (error || !data) return true;  // Default to enabled
-        return data.value === 'true';
+        // 💡 تعديل: إذا لم توجد القيمة أو حدث خطأ، نعتبرها False (مطفية) افتراضياً لتجنب الإزعاج
+        if (error || !data) return false; 
+        
+        // التحقق من القيمة سواء كانت مخزنة كـ Boolean أو String
+        return data.value === true || data.value === 'true';
     } catch {
-        return true;  // Default on error
+        return false;
     }
 }
 
 export const setDeviceBindingSetting = async (enabled: boolean): Promise<void> => {
-    await supabase.from('settings').upsert({ key: 'deviceBindingEnabled', value: enabled.toString() });
+    // 💡 تعديل: إرسال القيمة كـ Boolean مباشرة لجدول JSONB
+    await supabase.from('settings').upsert({ 
+        key: 'deviceBindingEnabled', 
+        value: enabled // نرسلها كـ true/false وليس كنص
+    });
 }
 
 export const getAbsencePercentageSetting = async (): Promise<boolean> => {
