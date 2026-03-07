@@ -378,9 +378,13 @@ export const getAttendance = async (): Promise<AttendanceRecord[]> => {
 
 // 💡 التعديل: إضافة batchId كمعامل اختياري للفلترة
 export const getLectures = async (batchId?: string): Promise<Lecture[]> => {
+    // 💡 تأكد أن batchId هو نص وليس كائن قبل البدء
+    if (typeof batchId !== 'string' && batchId !== undefined) {
+        batchId = undefined;
+    }
+
     let query = supabase.from('lectures').select('*');
     
-    // إذا تم تمرير معرف الدفعة، نقوم بجلب محاضراتها فقط
     if (batchId) {
         query = query.eq('batch_id', batchId);
     }

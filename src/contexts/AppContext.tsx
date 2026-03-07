@@ -148,11 +148,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
 
   const { data: fetchedBatches } = useQuery({ queryKey: ['batches'], queryFn: getBatches });
-    // 💡 التعديل: ربط الاستعلام بالدفعة المختارة لضمان عدم التداخل
+  // 💡 التعديل: نستخدم Arrow Function لنضمن تمرير الـ ID فقط أو undefined
   const { data: fetchedLectures } = useQuery({ 
-      queryKey: ['lectures', state.selectedBatchId], // إضافة المعرف لمفتاح الاستعلام لإعادة التحميل عند تغيير الدفعة
-      queryFn: () => getLectures(state.selectedBatchId || undefined), // تمرير المعرف للدالة
-      enabled: true // تأكد أن الاستعلام مفعّل دائماً أو عند اختيار دفعة
+      queryKey: ['lectures', state.selectedBatchId], 
+      queryFn: () => getLectures(state.selectedBatchId || undefined), // 👈 هذا هو السطر المطلوب
+      enabled: true 
   });
   const { data: fetchedAttendance } = useQuery({ queryKey: ['attendance'], queryFn: getAttendance });
 
